@@ -3,38 +3,41 @@
       integer::nhy
       integer,parameter::nhymax=600000
       real(8)::time,dt
+      real(8),parameter:: Coul=0.03d0
       data time / 0.0d0 /
       real(8),parameter:: timemax=5.0d0
       real(8),parameter:: dtout=5.0d0/600
 
-      integer,parameter::ngrid=128
+      integer,parameter::izones=150
+      integer,parameter::jzones=50
       integer,parameter::mgn=2
-      integer,parameter::in=ngrid+2*mgn+1 &
-     &                  ,jn=ngrid+2*mgn+1 &
+      integer,parameter::in=izones+2*mgn+1 &
+     &                  ,jn=jzones+2*mgn+1 &
      &                  ,kn=1
       integer,parameter::is=mgn+1 &
      &                  ,js=mgn+1 &
      &                  ,ks=1
-      integer,parameter::ie=ngrid+mgn &
-     &                  ,je=ngrid+mgn &
+      integer,parameter::ie=izones+mgn &
+     &                  ,je=jzones+mgn &
      &                  ,ke=1
 
-      real(8),parameter:: x1min=-0.5d0,x1max=0.5d0
-      real(8),parameter:: x2min=-0.5d0,x2max=0.5d0
+      real(8),parameter:: x1min=-0.75d0,x1max=0.75d0
+      real(8),parameter:: x2min=-0.25d0,x2max=0.25d0
       real(8),dimension(in)::x1a,x1b
       real(8),dimension(jn)::x2a,x2b
       real(8),dimension(kn)::x3a,x3b
 
       real(8),dimension(in,jn,kn)::d,et,mv1,mv2,mv3
       real(8),dimension(in,jn,kn)::p,ei,v1,v2,v3,cs
+      real(8),dimension(in,jn,kn)::gp,gp1a,gp2a
       end module commons
      
       module eosmod
       implicit none
 ! adiabatic
-!      real(8),parameter::gam=5.0d0/3.0d0 !! adiabatic index
+      real(8),parameter::gam=1.4d0 !! adiabatic index
 ! isothermal
-      real(8)::csiso  !! isothemal sound speed
+!      real(8)::csiso  !! isothemal sound speed
 end module eosmod
 
       module fluxmod
@@ -52,6 +55,7 @@ end module eosmod
       integer,parameter:: mden=1,mrv1=2,mrv2=3,mrv3=4,meto=5 &
      &                          ,mrvu=muvu,mrvv=muvv,mrvw=muvw
       real(8),dimension(mflx,in,jn,kn):: nflux1,nflux2,nflux3
+      real(8),dimension(in,jn,kn):: grvsrc1,grvsrc2,grvsrc3
 
       end module fluxmod
 
@@ -70,6 +74,7 @@ end module eosmod
          if(mod(nhy,100) .eq. 0 ) write(6,*)nhy,time,dt
          call BoundaryCondition
          call StateVevtor
+         call GravForce
          call NumericalFlux1
          call NumericalFlux2
          call UpdateConsv
@@ -87,7 +92,7 @@ end module eosmod
       implicit none
       real(8)::dx,dy
       integer::i,j,k
-      dx=(x1max-x1min)/ngrid
+      dx=(x1max-x1min)/izones
       do i=1,in
          x1a(i) = dx*(i-(mgn+1))+x1min
       enddo
@@ -95,7 +100,7 @@ end module eosmod
          x1b(i) = 0.5d0*(x1a(i+1)+x1a(i))
       enddo
 
-      dy=(x2max-x2min)/ngrid
+      dy=(x2max-x2min)/jzones
       do j=1,jn
          x2a(j) = dy*(j-(mgn+1))+x2min
       enddo
@@ -111,114 +116,118 @@ end module eosmod
       use eosmod
       implicit none
       integer::i,j,k
+
+      real(8) :: RU,RD,Gra,P0,Rcenter
+      data RU  / 2.0d0 /
+      data RD  / 1.0d0 /
+      data GRA / 0.1d0 /
+      data P0  / 2.5d0 /
+      data Rcenter / 0.0d0 /
+
+      real(8)::d1d(in),pa1d(in),pb1d(in)
+
       real(8)::pi
-      real(8),parameter::k_ini=10.0d0
-
-      real(8),dimension(in,jn,kn)::vpsi1b,vpsi2b
-      real(8):: psinorm
-
-      integer::seedsize
-      integer,allocatable:: seed(:)
-      real(8)::x
-
-      real(8),parameter:: ekin = 2.0d0
-      real(8),parameter:: emag = 0.0d0
-      real(8),parameter:: eint = 1.0d0
-      real(8),parameter:: d0 = 1.0d0
-      real(8),parameter:: v0 = sqrt(ekin*2.d0/d0)
-      real(8),parameter:: b0 = sqrt(emag*2.0)
-      real(8)          :: p0
-      real(8),parameter:: eps = 1.0d-1
-
-      call random_seed(size=seedsize)
-      write(6,*)"seed size",seedsize
-      allocate(seed(seedsize))  
-      call random_seed(get=seed)
-
       pi=acos(-1.0d0)
-      psinorm = 1.0d0/(2.0d0*pi*k_ini)
 
-      d(:,:,:) = d0
+      d(:,:,:) = 1.0d0
 
-      do k=ks,ke
-      do j=js,je+1
-      do i=is,ie+1
-         vpsi1b(i,j,k) = psinorm * sin(k_ini*x1b(i)*2.0d0*pi/(x1max-x1min)) &
-     &                           * sin(k_ini*x2a(j)*2.0d0*pi/(x2max-x2min))
-         vpsi2b(i,j,k) = psinorm * sin(k_ini*x1a(i)*2.0d0*pi/(x1max-x1min)) &
-     &                           * sin(k_ini*x2b(j)*2.0d0*pi/(x2max-x2min))
-      enddo
-      enddo
+      do i=1,in-1
+         if(x1b(i) .lt. Rcenter) then
+            d1d(i) = RD   
+         else
+            d1d(i) = RU
+         endif
       enddo
 
-! adiabatic
-!       p0= eint/(gam-1.0d0)
-! isotermal
-       csiso= sqrt(eint/d0)
-       p0 = d0 *csiso**2
+      pa1d(1:is) = P0 - GRA * RD * x1a(1:is) ! x1a(1) is negative
+
+      do i=is,in-1
+          pa1d(i+1) = pa1d(i) & 
+     &       - d1d(i)*GRA*(x1a(i+1)-x1a(i))
+      enddo
+
+
+      do i=1,in-1
+         pb1d(i) = 0.5d0*(pa1d(i+1)+pa1d(i))
+      enddo
 
       do k=ks,ke
       do j=js,je
       do i=is,ie
-         v1(i,j,k) =  v0*(vpsi1b(i,j+1,k)-vpsi1b(i,j,k))/(x2a(j+1)-x2a(j))
-         v2(i,j,k) = -v0*(vpsi2b(i+1,j,k)-vpsi2b(i,j,k))/(x1a(i+1)-x1a(i))
-          p(i,j,k) =  p0
+          d(i,j,k) = d1d(i)
+          p(i,j,k) = pb1d(i)
+         v1(i,j,k) = 0.0d0
+         v2(i,j,k) = 0.0d0
          v3(i,j,k) = 0.0d0
-         call random_number(x)
-         v1(i,j,k) = v1(i,j,k) *(1.0d0+eps*(x-0.5d0))
-         call random_number(x)
-         v2(i,j,k) = v2(i,j,k) *(1.0d0+eps*(x-0.5d0))
       enddo
       enddo
       enddo
 
+      do k=ks,ke
+      do j=js,je
+      do i=1,in-1
+         gp(i,j,k) = -GRA*x1b(i)
+      enddo
+      enddo
+      enddo
+
+! pert
+      do k=ks,ke
+      do j=js,je
+      do i=is,ie
+          v1(i,j,k)= 0.01d0/4.0d0 &
+     & *(1.0d0+cos(2.0d0*pi*(x2b(j)-(x2max+x2min)/2.0d0)/(x2max-x2min))) &
+     & *(1.0d0+cos(2.0d0*pi*(x1b(i)-(x1max+x1min)/2.0d0)/(x1max-x1min)))
+       enddo
+      enddo
+      enddo
 
       do k=ks,ke
       do j=js,je
       do i=is,ie
-! adiabatic
-!          ei(i,j,k) = p(i,j,k)/(gam-1.0d0)
-!          cs(i,j,k) = sqrt(gam*p(i,j,k)/d(i,j,k))
-! isotermal
-          ei(i,j,k) = p(i,j,k)
-          cs(i,j,k) = csiso
+          ei(i,j,k) = p(i,j,k)/(gam-1.0d0)
+          cs(i,j,k) = sqrt(gam*p(i,j,k)/d(i,j,k))
       enddo
       enddo
       enddo
       
-      write(6,*)"initial profile is set"
+
       call BoundaryCondition
 
       return
       end subroutine GenerateProblem
+
 
       subroutine BoundaryCondition
       use commons
       implicit none
       integer::i,j,k
 
+!reflection
       k=ks
       do j=1,jn-1
       do i=1,mgn
-           d(i,j,k) =  d(ie-mgn+i,j,k)
-          ei(i,j,k) = ei(ie-mgn+i,j,k)
-          v1(i,j,k) = v1(ie-mgn+i,j,k)
-          v2(i,j,k) = v2(ie-mgn+i,j,k)
-          v3(i,j,k) = v3(ie-mgn+i,j,k)
+           d(i,j,k) =   d(is+i-1,j,k)
+          ei(i,j,k) =  ei(is+i-1,j,k)
+          v1(i,j,k) = -v1(is+i-1,j,k) ! sign change
+          v2(i,j,k) =  v2(is+i-1,j,k)
+          v3(i,j,k) =  v3(is+i-1,j,k)
       enddo
       enddo
 
       k=ks
       do j=1,jn-1
       do i=1,mgn
-           d(ie+i,j,k) =  d(is+i-1,j,k)
-          ei(ie+i,j,k) = ei(is+i-1,j,k)
-          v1(ie+i,j,k) = v1(is+i-1,j,k)
-          v2(ie+i,j,k) = v2(is+i-1,j,k)
-          v3(ie+i,j,k) = v3(is+i-1,j,k)
+           d(ie+i,j,k) =   d(ie-i+1,j,k)
+          ei(ie+i,j,k) =  ei(ie-i+1,j,k)
+          v1(ie+i,j,k) = -v1(ie-i+1,j,k) ! sign change
+          v2(ie+i,j,k) =  v2(ie-i+1,j,k)
+          v3(ie+i,j,k) =  v3(ie-i+1,j,k)
       enddo
       enddo
 
+
+!periodic
       k=ks
       do i=1,in-1
       do j=1,mgn
@@ -286,11 +295,11 @@ end module eosmod
      &                    +v3(i,j,k)**2)
 
 ! adiabatic
-!           p(i,j,k) =  ei(i,j,k)*(gam-1.0d0)
-!          cs(i,j,k) =  sqrt(gam*p(i,j,k)/d(i,j,k))
+           p(i,j,k) =  ei(i,j,k)*(gam-1.0d0)
+          cs(i,j,k) =  sqrt(gam*p(i,j,k)/d(i,j,k))
 ! isotermal
-           p(i,j,k) =  d(i,j,k)*csiso**2
-          cs(i,j,k) =  csiso
+!           p(i,j,k) =  d(i,j,k)*csiso**2
+!          cs(i,j,k) =  csiso
       enddo
       enddo
       enddo
@@ -320,7 +329,7 @@ end module eosmod
       enddo
       enddo
 
-      dt = 0.05d0 * dtmin
+      dt = Coul * dtmin
 !      write(6,*)"dt",dt
       return
       end subroutine TimestepControl
@@ -340,14 +349,16 @@ end module eosmod
          svc(nve2,i,j,k) = v2(i,j,k)
          svc(nve3,i,j,k) = v3(i,j,k)
 ! adiabatic
-!         svc(nene,i,j,k) = ei(i,j,k)/d(i,j,k)
-!         svc(npre,i,j,k) = ei(i,j,k)*(gam-1.0d0)
-!         svc(ncsp,i,j,k) = sqrt(gam*(gam-1.0d0)*ei(i,j,k)/d(i,j,k))
+         svc(nene,i,j,k) = ei(i,j,k)/d(i,j,k)
+         svc(npre,i,j,k) = ei(i,j,k)*(gam-1.0d0)
+         svc(ncsp,i,j,k) = sqrt(gam*(gam-1.0d0)*ei(i,j,k)/d(i,j,k))
 ! isotermal
-         svc(nene,i,j,k) = csiso**2
-         svc(npre,i,j,k) = d(i,j,k)*csiso**2
-         svc(ncsp,i,j,k) = csiso
-         p(i,j,k) = svc(npre,i,j,k)  ! for output boundary 
+!         svc(nene,i,j,k) = csiso**2
+!         svc(npre,i,j,k) = d(i,j,k)*csiso**2
+!         svc(ncsp,i,j,k) = csiso
+
+ ! for output
+         p(i,j,k) = svc(npre,i,j,k) 
       enddo
       enddo
 
@@ -835,6 +846,47 @@ end module eosmod
       return
       end subroutine HLLC
 
+      subroutine GravForce
+      use commons
+      use fluxmod
+      implicit none
+      integer :: i,j,k,n
+
+      do k=ks,ke
+      do j=js,je
+      do i=is,ie+1
+         gp1a(i  ,j,k) = gp(i,j,k) &
+     & - 0.5d0*(gp(i  ,j,k)-gp(i-1,j,k))
+
+         gp1a(i+1,j,k) = gp(i,j,k) &
+     & + 0.5d0*(gp(i+1,j,k)-gp(i  ,j,k))
+
+       grvsrc1(i,j,k) = (gp1a(i+1,j,k)-gp1a(i,j,k))/(x1a(i+1)-x1a(i))*d(i,j,k)
+
+      enddo
+      enddo
+      enddo
+
+      do k=ks,ke
+      do i=is,ie
+      do j=js,je+1
+         gp2a(i  ,j,k) = gp(i,j,k) &
+     & - 0.5d0*(gp(i  ,j,k)-gp(i,j-1,k))
+
+         gp2a(i,j+1,k) = gp(i,j,k) &
+     & + 0.5d0*(gp(i,j+1,k)-gp(i  ,j,k))
+
+       grvsrc2(i,j,k) = (gp2a(i,j+1,k)-gp2a(i,j,k))/(x2a(j+1)-x2a(j))*d(i,j,k)
+
+      enddo
+      enddo
+      enddo
+
+       grvsrc3(:,:,:) = 0.0d0
+
+      return
+      end subroutine  GravForce
+
       subroutine UpdateConsv
       use commons
       use fluxmod
@@ -847,7 +899,7 @@ end module eosmod
          
          d(i,j,k) = d(i,j,k)                       &
      & +dt*(                                       &
-     &  (- nflux1(mden,i+1,j,k)                    &
+     & +(- nflux1(mden,i+1,j,k)                    &
      &   + nflux1(mden,i  ,j,k))/(x1a(i+1)-x1a(i)) &
      & +(- nflux2(mden,i,j+1,k)                    &
      &   + nflux2(mden,i,j  ,k))/(x2a(j+1)-x2a(j)) &
@@ -855,7 +907,8 @@ end module eosmod
 
          mv1(i,j,k) = mv1(i,j,k)                   &
      & +dt*(                                       &
-     &  (- nflux1(mrv1,i+1,j,k)                    &
+     &      +  grvsrc1(i,j,k)                      &
+     & +(- nflux1(mrv1,i+1,j,k)                    &
      &   + nflux1(mrv1,i  ,j,k))/(x1a(i+1)-x1a(i)) &
      & +(- nflux2(mrv1,i,j+1,k)                    &
      &   + nflux2(mrv1,i,j  ,k))/(x2a(j+1)-x2a(j)) &
@@ -863,7 +916,8 @@ end module eosmod
 
          mv2(i,j,k) = mv2(i,j,k)                   &    
      & +dt*(                                       &
-     &  (- nflux1(mrv2,i+1,j,k)                    &
+     &      +  grvsrc2(i,j,k)                      &
+     & +(- nflux1(mrv2,i+1,j,k)                    &
      &   + nflux1(mrv2,i  ,j,k))/(x1a(i+1)-x1a(i)) &
      & +(- nflux2(mrv2,i,j+1,k)                    &
      &   + nflux2(mrv2,i,j  ,k))/(x2a(j+1)-x2a(j)) &
@@ -871,7 +925,8 @@ end module eosmod
 
          mv3(i,j,k) = mv3(i,j,k)                   & 
      & +dt*(                                       &
-     &  (- nflux1(mrv3,i+1,j,k)                    &
+     &      +  grvsrc3(i,j,k)                      &
+     & +(- nflux1(mrv3,i+1,j,k)                    &
      &   + nflux1(mrv3,i  ,j,k))/(x1a(i+1)-x1a(i)) &
      & +(- nflux2(mrv3,i,j+1,k)                    &
      &   + nflux2(mrv3,i,j  ,k))/(x2a(j+1)-x2a(j)) &
@@ -904,7 +959,7 @@ end module eosmod
       integer,parameter:: unitout=17
       integer,parameter:: unitbin=13
       integer,parameter:: gs=1
-      integer,parameter:: nvar=5
+      integer,parameter:: nvar=6
       real(8)::x1out(is-gs:ie+gs,2)
       real(8)::x2out(js-gs:je+gs,2)
       real(8)::hydout(is-gs:ie+gs,js-gs:je+gs,ks,nvar)
@@ -924,8 +979,8 @@ end module eosmod
 
       open(unitout,file=filename,status='replace',form='formatted')
       write(unitout,*) "# ",time,dt
-      write(unitout,*) "# ",ngrid,gs
-      write(unitout,*) "# ",ngrid,gs
+      write(unitout,*) "# ",izones,gs
+      write(unitout,*) "# ",jzones,gs
       close(unitout)
 
       x1out(is-gs:ie+gs,1) = x1b(is-gs:ie+gs)
@@ -939,6 +994,7 @@ end module eosmod
       hydout(is-gs:ie+gs,js-gs:je+gs,ks,3) = v2(is-gs:ie+gs,js-gs:je+gs,ks)
       hydout(is-gs:ie+gs,js-gs:je+gs,ks,4) = v3(is-gs:ie+gs,js-gs:je+gs,ks)
       hydout(is-gs:ie+gs,js-gs:je+gs,ks,5) =  p(is-gs:ie+gs,js-gs:je+gs,ks)
+      hydout(is-gs:ie+gs,js-gs:je+gs,ks,6) = gp(is-gs:ie+gs,js-gs:je+gs,ks)
 
       write(filename,'(a3,i5.5,a4)')"bin",nout,".dat"
       filename = trim(dirname)//filename
