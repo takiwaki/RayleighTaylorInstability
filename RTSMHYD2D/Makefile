@@ -44,14 +44,9 @@ else
 endif
 
 # 2D cross section
-VOR   = $(patsubst ${dird}/unf%.dat,${dira}/vor%.dat,$(BIN))
-VORPNG= $(patsubst ${dira}/vor%.dat,${dirf}/vor%.png,$(VOR))
-KINPNG= $(patsubst ${dira}/vor%.dat,${dirf}/kin%.png,$(VOR))
-
-# spectrum
-SPC   = $(patsubst ${dird}/unf%.dat,${dira}/spc%.dat,$(BIN))
-KSPPNG= $(patsubst ${dira}/spc%.dat,${dirf}/ksp%.png,$(SPC))
-VSPPNG= $(patsubst ${dira}/spc%.dat,${dirf}/vsp%.png,$(SPC))
+DEN   = $(patsubst ${dird}/unf%.dat,${dira}/vor%.dat,$(BIN))
+VORPNG= $(patsubst ${dira}/vor%.dat,${dirf}/vor%.png,$(DEN))
+KINPNG= $(patsubst ${dira}/vor%.dat,${dirf}/kin%.png,$(DEN))
 
 # intgrated values 
 TOT   = $(patsubst ${dird}/unf%.dat,${dira}/tot%.dat,$(BIN))
@@ -108,7 +103,7 @@ t-prof.dat: MakeTimeseq.sh ${TOT}
 movie: ${moviefile}
 
 ${vormovie}: MakeMovie.sh ${VORPNG}
-	./MakeMovie.sh vor
+	./MakeMovie.sh den
 
 ${kinmovie}: MakeMovie.sh ${KINPNG}
 	./MakeMovie.sh kin
@@ -130,11 +125,11 @@ ${vspmovie}: MakeMovie.sh ${VSPPNG}
 
 2Dsnaps: ${VORPNG} ${KINPNG} 
 
-${VORPNG}: vor.plt MakeSnap.sh ${VOR}
-	./MakeSnap.sh vor.plt
+${VORPNG}: den.plt MakeSnap.sh ${DEN}
+	./MakeSnap.sh den den.plt
 
-${KINPNG}: vor.plt MakeSnap.sh ${VOR}
-	./MakeSnap.sh vor.plt
+${KINPNG}: den.plt MakeSnap.sh ${DEN}
+	./MakeSnap.sh den den.plt
 
 ########################
 # spectrum
@@ -162,7 +157,7 @@ count-number: ${countfile}
 ${countfile}: CountBindata.sh
 	./CountBindata.sh
 
-${VOR}: ${ana} ${BIN} ${countfile}
+${DEN}: ${ana} ${BIN} ${countfile}
 	./${ana}
 
 ${SPC}: ${ana} ${BIN} ${countfile}

@@ -120,7 +120,7 @@ subroutine Visualize2D
   enddo
   enddo
 
-  write(filename,'(a3,i5.5,a4)')"vor",incr,".dat"
+  write(filename,'(a3,i5.5,a4)')"den",incr,".dat"
   filename = trim(dirname)//filename
   open(unitvor,file=filename,status='replace',form='formatted')
 

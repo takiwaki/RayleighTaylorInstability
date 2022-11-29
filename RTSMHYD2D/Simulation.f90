@@ -1,12 +1,12 @@
       module commons
       implicit none
       integer::nhy
-      integer,parameter::nhymax=600000
+      integer,parameter::nhymax=6000000
       real(8)::time,dt
       real(8),parameter:: Coul=0.03d0
       data time / 0.0d0 /
-      real(8),parameter:: timemax=5.0d0
-      real(8),parameter:: dtout=5.0d0/600
+      real(8),parameter:: timemax=15.0d0
+      real(8),parameter:: dtout=timemax/500
 
       integer,parameter::izones=150
       integer,parameter::jzones=50
@@ -207,11 +207,12 @@ end module eosmod
       k=ks
       do j=1,jn-1
       do i=1,mgn
-           d(i,j,k) =   d(is+i-1,j,k)
-          ei(i,j,k) =  ei(is+i-1,j,k)
-          v1(i,j,k) = -v1(is+i-1,j,k) ! sign change
-          v2(i,j,k) =  v2(is+i-1,j,k)
-          v3(i,j,k) =  v3(is+i-1,j,k)
+           d(is-i,j,k) =   d(is+i-1,j,k)
+          ei(is-i,j,k) =  ei(is+i-1,j,k)
+          v1(is-i,j,k) = -v1(is+i-1,j,k) ! sign change
+          v2(is-i,j,k) =  v2(is+i-1,j,k)
+          v3(is-i,j,k) =  v3(is+i-1,j,k)
+          gp(is-i,j,k) =  gp(is+i-1,j,k)
       enddo
       enddo
 
@@ -223,22 +224,24 @@ end module eosmod
           v1(ie+i,j,k) = -v1(ie-i+1,j,k) ! sign change
           v2(ie+i,j,k) =  v2(ie-i+1,j,k)
           v3(ie+i,j,k) =  v3(ie-i+1,j,k)
+          gp(ie+i,j,k) =  gp(ie-i+1,j,k)
       enddo
       enddo
 
-
-!periodic
+! periodic
       k=ks
       do i=1,in-1
       do j=1,mgn
-           d(i,j,k) =  d(i,je-mgn+j,k)
-          ei(i,j,k) = ei(i,je-mgn+j,k)
-          v1(i,j,k) = v1(i,je-mgn+j,k)
-          v2(i,j,k) = v2(i,je-mgn+j,k)
-          v3(i,j,k) = v3(i,je-mgn+j,k)
+           d(i,js-j,k) =  d(i,je-j+1,k)
+          ei(i,js-j,k) = ei(i,je-j+1,k)
+          v1(i,js-j,k) = v1(i,je-j+1,k)
+          v2(i,js-j,k) = v2(i,je-j+1,k)
+          v3(i,js-j,k) = v3(i,je-j+1,k)
+          gp(i,js-j,k) = gp(i,je-j+1,k)
       enddo
       enddo
 
+! periodic
       k=ks
       do i=1,in-1
       do j=1,mgn
@@ -247,9 +250,9 @@ end module eosmod
           v1(i,je+j,k) = v1(i,js+j-1,k)
           v2(i,je+j,k) = v2(i,js+j-1,k)
           v3(i,je+j,k) = v3(i,js+j-1,k)
+          gp(i,je+j,k) = gp(i,js+j-1,k)
       enddo
       enddo
-
 
       return
       end subroutine BoundaryCondition
