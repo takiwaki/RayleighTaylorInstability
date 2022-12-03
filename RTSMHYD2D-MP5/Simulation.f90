@@ -433,12 +433,139 @@ end module eosmod
       return
       end subroutine MClimiter
 
+      subroutine MP5(wwc,toleft,torigt)
+        implicit none
+        real(8),dimension(5),intent(in) :: wwc
+        real(8),intent(out) :: torigt,toleft
+        real(8),dimension(5,2),save:: ccx
+        real(8) :: wwor,wwol
+        real(8) :: djm1,dj,djp1,dm4jph,dm4jmh,qqul,qqmd,qqlc
+        real(8) :: dq,qqmin,qqmax,qqlr
+        real(8) :: r
+        real(8) :: qqll
+        real(8) :: limiter
+        real(8),parameter :: Alpha = 1d0, BC2 = 1d0/3d0
+        real(8),parameter :: huge=1.0d10
+
+        logical, save:: is_inited
+        data is_inited /.false./
+
+        if (.not. is_inited) then
+           
+           ccx(1,1) =   1.0d0/30.0d0
+           ccx(2,1) = -13.0d0/60.0d0
+           ccx(3,1) =  47.0d0/60.0d0
+           ccx(4,1) =   9.0d0/20.0d0
+           ccx(5,1) =  -1.0d0/20.0d0
+           
+           ccx(1,2) =  -1.0d0/20.0d0
+           ccx(2,2) =   9.0d0/20.0d0
+           ccx(3,2) =  47.0d0/60.0d0
+           ccx(4,2) = -13.0d0/60.0d0
+           ccx(5,2) =   1.0d0/30.0d0
+           is_inited =.true.
+        endif
+
+! interpolation for right side => 
+               wwor = ccx(1,2)*wwc(1) + ccx(2,2)*wwc(2) &
+     &              + ccx(3,2)*wwc(3) + ccx(4,2)*wwc(4) &
+     &              + ccx(5,2)*wwc(5)
+
+               dq = (wwc(4)-wwc(3))
+               if(dq .ne.0.0d0)then
+                  r = (wwc(3)-wwc(2))/(dq)
+               else
+                  r = 2.0d0
+               endif
+!     MC limiter
+               limiter = max(0d0,min(2d0*r,0.5d0*(1d0+r)))
+
+!     lower limiter
+               qqll = wwc(3) + max(0d0,min(1d0,r)) &
+     &              *(wwc(4)-wwc(3))*0.5d0
+
+               qqul = wwc(3) + limiter*(wwc(4)-wwc(3))*0.5d0
+
+               djm1 = wwc(1) -2d0*wwc(2) + wwc(3)
+               dj   = wwc(2) -2d0*wwc(3) + wwc(4)
+               djp1 = wwc(3) -2d0*wwc(4) + wwc(5)           
+
+               dm4jph = minmod4(4.0d0*dj-djp1,4.0d0*djp1-dj,dj,djp1)
+               dm4jmh = minmod4(4.0d0*dj-djm1,4.0d0*djm1-dj,dj,djm1)
+
+               qqmd = 0.5d0*(wwc(3)+wwc(4) - dm4jph)
+               qqlc = wwc(3) + 0.5d0*(wwc(3)-wwc(2)) + BC2*dm4jmh
+
+               if(dm4jmh < 1d-20) qqlc = qqll
+               qqmin = max(min(wwc(3),wwc(4),qqmd),min(qqll,qqul,qqlc))
+               qqmax = min(max(wwc(3),wwc(4),qqmd),max(qqll,qqul,qqlc))
+
+               torigt = wwor + minmod2((qqmin-wwor),(qqmax-wwor))
+
+! interpolation for left side  <= 
+               wwol = ccx(1,1)*wwc(1) + ccx(2,1)*wwc(2) &
+     &              + ccx(3,1)*wwc(3) + ccx(4,1)*wwc(4) &
+     &              + ccx(5,1)*wwc(5)
+
+               dq = (wwc(2)-wwc(3))
+               if(dq .ne.0.0d0)then 
+                  r = (wwc(3)-wwc(4))/(dq)
+               else
+                  r = 2.0d0
+               endif
+!     MC limiter
+               limiter = max(0d0,min(2d0*r,0.5d0*(1d0+r)))
+!     lower limiter
+               qqll = wwc(3) + max(0d0,min(1d0,r))&
+     &              *(wwc(2)-wwc(3))*0.5d0
+               
+               qqlr = wwc(3) + limiter*(wwc(2)-wwc(3))*0.5d0
+
+!               dm4jph = minmod4(4.0d0*dj-djp1,4.0d0*djp1-dj,dj,djp1)
+!               dm4jmh = minmod4(4.0d0*dj-djm1,4.0d0*djm1-dj,dj,djm1)
+
+               qqmd = 0.5d0*(wwc(3)+wwc(2) - dm4jmh)
+               qqlc = wwc(3) + 0.5d0*(wwc(3)-wwc(4)) + BC2*dm4jph
+           
+               if(dm4jph < 1d-20) qqlc = qqll
+               qqmin = max(min(wwc(3),wwc(2),qqmd),min(qqll,qqlr,qqlc))
+               qqmax = min(max(wwc(3),wwc(2),qqmd),max(qqll,qqlr,qqlc))
+
+               toleft = wwol + minmod2((qqmin-wwol),(qqmax-wwol))
+
+        return
+
+      contains
+
+      function minmod2(x,y)
+      real(8), intent(in) :: x,y
+      real(8) :: minmod2
+
+      minmod2 = 0.5d0*(sign(1.0d0,x)+sign(1.0d0,y))*min(dabs(x),dabs(y))
+      
+      end function minmod2
+
+      function minmod4(d1,d2,d3,d4)
+      real(8), intent(in) :: d1,d2,d3,d4
+      real(8) :: sign1,minmod4
+      
+      sign1 = sign(1d0,d1)
+      minmod4 = 0.125d0*(sign1+sign(1.0d0,d2)) &
+     & *dabs( (sign1+sign(1.0d0,d3)) &
+     & *(sign1+sign(1.0d0,d4))) &
+     & *min(dabs(d1),dabs(d2),dabs(d3),dabs(d4))
+      
+      end function minmod4
+
+      end subroutine MP5
+
       subroutine NumericalFlux1
       use commons, only: is,ie,in,js,je,jn,ks,ke,kn
       use fluxmod
       implicit none
-      integer::i,j,k
-      real(8),dimension(nhyd):: dsvp,dsvm,dsvc,dsv
+      integer::i,j,k,n
+      real(8),dimension(5):: wwc
+      real(8):: toleft,torigt
       real(8),dimension(nhyd,in,jn,kn):: leftpr,rigtpr
       real(8),dimension(2*mflx+madd,in,jn,kn):: leftco,rigtco
       real(8),dimension(2*mflx+madd):: leftst,rigtst
@@ -447,14 +574,18 @@ end module eosmod
       k=ks
       do j=js,je
       do i=is-1,ie+1
-         dsvp(:) = (svc(:,i+1,j,k) -svc(:,i,j,k)                 )
-         dsvm(:) = (                svc(:,i,j,k) - svc(:,i-1,j,k))
-
-         call vanLeer(dsvp,dsvm,dsv)
-!         call minmod(dsvp,dsvm,dsv)
-         leftpr(:,i+1,j,k) = svc(:,i,j,k) + 0.5d0*dsv(:)
-         rigtpr(:,i  ,j,k) = svc(:,i,j,k) - 0.5d0*dsv(:)
+         do n=1,nhyd
+            wwc(1:5) = svc(n,i-2:i+2,j,k)
+            call MP5(wwc,toleft,torigt)
+            leftpr(n,i+1,j,k) = torigt
+            rigtpr(n,i  ,j,k) = toleft
+!            leftpr(n,i+1,j,k) = svc(n,i,j,k)
+!            rigtpr(n,i  ,j,k) = svc(n,i,j,k)
+!            write(6,*)"wwc",wwc
+!            write(6,*)"l,r",toleft,torigt
+         enddo
       enddo
+!            stop
       enddo
 
       do j=js,je
@@ -538,8 +669,9 @@ end module eosmod
       use commons, only: is,ie,in,js,je,jn,ks,ke,kn
       use fluxmod
       implicit none
-      integer::i,j,k
-      real(8),dimension(nhyd):: dsvp,dsvm,dsvc,dsv
+      integer::i,j,k,n
+      real(8),dimension(5):: wwc
+      real(8):: toleft,torigt
       real(8),dimension(nhyd,in,jn,kn):: leftpr,rigtpr
       real(8),dimension(2*mflx+madd,in,jn,kn):: leftco,rigtco
       real(8),dimension(2*mflx+madd):: leftst,rigtst
@@ -548,17 +680,16 @@ end module eosmod
       k=ks
       do i=is,ie
       do j=js-1,je+1
-         dsvp(:) = (svc(:,i,j+1,k) -svc(:,i,j,k)                 )
-         dsvm(:) = (                svc(:,i,j,k) - svc(:,i,j-1,k))
-
-         call vanLeer(dsvp,dsvm,dsv)
-!         call minmod(dsvp,dsvm,dsv)
-         leftpr(:,i,j+1,k) = svc(:,i,j,k) + 0.5d0*dsv(:)
-         rigtpr(:,i,j  ,k) = svc(:,i,j,k) - 0.5d0*dsv(:)
-
-!         leftpr(:,i,j,k) = svc(:,i,j-1,k)
-!         rigtpr(:,i,j,k) = svc(:,i,j  ,k)
-
+         do n=1,nhyd
+            wwc(1:5) = svc(n,i,j-2:j+2,k)
+            call MP5(wwc,toleft,torigt)
+            leftpr(n,i,j+1,k) = torigt
+            rigtpr(n,i,j  ,k) = toleft
+!            leftpr(n,i+1,j,k) = svc(n,i,j,k)
+!            rigtpr(n,i  ,j,k) = svc(n,i,j,k)
+!            write(6,*)"wwc",wwc
+!            write(6,*)"l,r",toleft,torigt
+         enddo
        enddo
        enddo  
 
@@ -1007,8 +1138,8 @@ end module eosmod
       x1out(is-gs:ie+gs,1) = x1b(is-gs:ie+gs)
       x1out(is-gs:ie+gs,2) = x1a(is-gs:ie+gs)
 
-      x2out(is-gs:ie+gs,1) = x2b(is-gs:ie+gs)
-      x2out(is-gs:ie+gs,2) = x2a(is-gs:ie+gs)
+      x2out(js-gs:je+gs,1) = x2b(js-gs:je+gs)
+      x2out(js-gs:je+gs,2) = x2a(js-gs:je+gs)
 
       hydout(is-gs:ie+gs,js-gs:je+gs,ks,1) =  d(is-gs:ie+gs,js-gs:je+gs,ks)
       hydout(is-gs:ie+gs,js-gs:je+gs,ks,2) = v1(is-gs:ie+gs,js-gs:je+gs,ks)
