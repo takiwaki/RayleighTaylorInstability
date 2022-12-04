@@ -437,101 +437,75 @@ end module eosmod
         implicit none
         real(8),dimension(5),intent(in) :: wwc
         real(8),intent(out) :: torigt,toleft
-        real(8),dimension(5,2),save:: ccx
-        real(8) :: wwor,wwol
+! ph : plus half i+1/2
+! mh : minus half i-1/2 
+        real(8),dimension(5),parameter:: ccph = (/  1.0d0/30.0d0, -13.0d0/60.0d0, 47.0d0/60.0d0,   9.0d0/20.0d0,  -1.0d0/20.0d0 /)
+        real(8),dimension(5),parameter:: ccpm = (/ -1.0d0/20.0d0,   9.0d0/20.0d0, 47.0d0/60.0d0, -13.0d0/60.0d0,   1.0d0/30.0d0 /)
+        real(8) :: wwor,wwol,wwmp
         real(8) :: djm1,dj,djp1,dm4jph,dm4jmh,qqul,qqmd,qqlc
-        real(8) :: dq,qqmin,qqmax,qqlr
+        real(8) :: dqp,dqm,qqmin,qqmax,qqlr
         real(8) :: r
         real(8) :: qqll
         real(8) :: limiter
-        real(8),parameter :: Alpha = 1d0, BC2 = 1d0/3d0
-        real(8),parameter :: huge=1.0d10
-
-        logical, save:: is_inited
-        data is_inited /.false./
-
-        if (.not. is_inited) then
-           
-           ccx(1,1) =   1.0d0/30.0d0
-           ccx(2,1) = -13.0d0/60.0d0
-           ccx(3,1) =  47.0d0/60.0d0
-           ccx(4,1) =   9.0d0/20.0d0
-           ccx(5,1) =  -1.0d0/20.0d0
-           
-           ccx(1,2) =  -1.0d0/20.0d0
-           ccx(2,2) =   9.0d0/20.0d0
-           ccx(3,2) =  47.0d0/60.0d0
-           ccx(4,2) = -13.0d0/60.0d0
-           ccx(5,2) =   1.0d0/30.0d0
-           is_inited =.true.
-        endif
+        real(8),parameter :: Alpha = 4.0d0, BC2 = 4.0d0/3d0
+        real(8),parameter :: eps=1.0d-10,huge=1.0d10
 
 ! interpolation for right side => 
-               wwor = ccx(1,2)*wwc(1) + ccx(2,2)*wwc(2) &
-     &              + ccx(3,2)*wwc(3) + ccx(4,2)*wwc(4) &
-     &              + ccx(5,2)*wwc(5)
-
-               dq = (wwc(4)-wwc(3))
-               if(dq .ne.0.0d0)then
-                  r = (wwc(3)-wwc(2))/(dq)
+               wwor = sum(ccph(:)*wwc(:))
+               dqp = (wwc(4)-wwc(3))
+               dqm = (wwc(3)-wwc(2))
+               
+               wwmp = wwc(3)+minmod2(Alpha*dqm,dqp)
+               if( (wwor-wwc(3))*(wwor-wwmp) .le. eps)then
+                  torigt = wwor
                else
-                  r = 2.0d0
+
+                  qqul = wwc(3) + Alpha*dqm
+
+                  djm1 = wwc(1) -2d0*wwc(2) + wwc(3)
+                  dj   = wwc(2) -2d0*wwc(3) + wwc(4)
+                  djp1 = wwc(3) -2d0*wwc(4) + wwc(5)           
+
+                  dm4jph = minmod4(4.0d0*dj-djp1,4.0d0*djp1-dj,dj,djp1)
+                  dm4jmh = minmod4(4.0d0*dj-djm1,4.0d0*djm1-dj,dj,djm1)
+
+                  qqmd = 0.5d0*(wwc(3)+wwc(4) - dm4jph)
+                  qqlc = wwc(3) + 0.5d0*(wwc(3)-wwc(2)) + BC2*dm4jmh
+
+                  qqmin = max(min(wwc(3),wwc(4),qqmd),min(wwc(3),qqul,qqlc))
+                  qqmax = min(max(wwc(3),wwc(4),qqmd),max(wwc(3),qqul,qqlc))
+
+                  torigt = wwor + minmod2((qqmin-wwor),(qqmax-wwor))
                endif
-!     MC limiter
-               limiter = max(0d0,min(2d0*r,0.5d0*(1d0+r)))
-
-!     lower limiter
-               qqll = wwc(3) + max(0d0,min(1d0,r)) &
-     &              *(wwc(4)-wwc(3))*0.5d0
-
-               qqul = wwc(3) + limiter*(wwc(4)-wwc(3))*0.5d0
-
-               djm1 = wwc(1) -2d0*wwc(2) + wwc(3)
-               dj   = wwc(2) -2d0*wwc(3) + wwc(4)
-               djp1 = wwc(3) -2d0*wwc(4) + wwc(5)           
-
-               dm4jph = minmod4(4.0d0*dj-djp1,4.0d0*djp1-dj,dj,djp1)
-               dm4jmh = minmod4(4.0d0*dj-djm1,4.0d0*djm1-dj,dj,djm1)
-
-               qqmd = 0.5d0*(wwc(3)+wwc(4) - dm4jph)
-               qqlc = wwc(3) + 0.5d0*(wwc(3)-wwc(2)) + BC2*dm4jmh
-
-               if(dm4jmh < 1d-20) qqlc = qqll
-               qqmin = max(min(wwc(3),wwc(4),qqmd),min(qqll,qqul,qqlc))
-               qqmax = min(max(wwc(3),wwc(4),qqmd),max(qqll,qqul,qqlc))
-
-               torigt = wwor + minmod2((qqmin-wwor),(qqmax-wwor))
 
 ! interpolation for left side  <= 
-               wwol = ccx(1,1)*wwc(1) + ccx(2,1)*wwc(2) &
-     &              + ccx(3,1)*wwc(3) + ccx(4,1)*wwc(4) &
-     &              + ccx(5,1)*wwc(5)
+               wwol = sum(ccpm(:)*wwc(:))
 
-               dq = (wwc(2)-wwc(3))
-               if(dq .ne.0.0d0)then 
-                  r = (wwc(3)-wwc(4))/(dq)
-               else
-                  r = 2.0d0
-               endif
-!     MC limiter
-               limiter = max(0d0,min(2d0*r,0.5d0*(1d0+r)))
-!     lower limiter
-               qqll = wwc(3) + max(0d0,min(1d0,r))&
-     &              *(wwc(2)-wwc(3))*0.5d0
                
-               qqlr = wwc(3) + limiter*(wwc(2)-wwc(3))*0.5d0
+               dqm = (wwc(2)-wwc(3))
+               dqp = (wwc(3)-wwc(4))
 
-!               dm4jph = minmod4(4.0d0*dj-djp1,4.0d0*djp1-dj,dj,djp1)
-!               dm4jmh = minmod4(4.0d0*dj-djm1,4.0d0*djm1-dj,dj,djm1)
+               wwmp = wwc(3) + minmod2(Alpha*dqp,dqm)
+               if( (wwol-wwc(3))*(wwol-wwmp) .le. eps)then
+                  toleft = wwol
+               else
+                  qqul = wwc(3) + Alpha*dqp
 
-               qqmd = 0.5d0*(wwc(3)+wwc(2) - dm4jmh)
-               qqlc = wwc(3) + 0.5d0*(wwc(3)-wwc(4)) + BC2*dm4jph
+                  djm1 = wwc(1) -2d0*wwc(2) + wwc(3)
+                  dj   = wwc(2) -2d0*wwc(3) + wwc(4)
+                  djp1 = wwc(3) -2d0*wwc(4) + wwc(5)           
+
+                  dm4jph = minmod4(4.0d0*dj-djp1,4.0d0*djp1-dj,dj,djp1)
+                  dm4jmh = minmod4(4.0d0*dj-djm1,4.0d0*djm1-dj,dj,djm1)
+
+                  qqmd = 0.5d0*(wwc(3)+wwc(2) - dm4jmh)
+                  qqlc = wwc(3) + 0.5d0*(wwc(3)-wwc(4)) + BC2*dm4jph
            
-               if(dm4jph < 1d-20) qqlc = qqll
-               qqmin = max(min(wwc(3),wwc(2),qqmd),min(qqll,qqlr,qqlc))
-               qqmax = min(max(wwc(3),wwc(2),qqmd),max(qqll,qqlr,qqlc))
+                  qqmin = max(min(wwc(3),wwc(2),qqmd),min(wwc(3),qqul,qqlc))
+                  qqmax = min(max(wwc(3),wwc(2),qqmd),max(wwc(3),qqul,qqlc))
 
-               toleft = wwol + minmod2((qqmin-wwol),(qqmax-wwol))
+                  toleft = wwol + minmod2((qqmin-wwol),(qqmax-wwol))
+               endif
 
         return
 
