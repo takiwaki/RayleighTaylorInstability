@@ -433,78 +433,149 @@ end module eosmod
       return
       end subroutine MClimiter
 
-      subroutine MP5(wwc,toleft,torigt)
+      subroutine WENO(vc,vmh,vph)
         implicit none
-        real(8),dimension(5),intent(in) :: wwc
-        real(8),intent(out) :: torigt,toleft
+        real(8),dimension(5),intent(in) :: vc
 ! ph : plus half i+1/2
 ! mh : minus half i-1/2 
+        real(8),intent(out) :: vmh,vph
+
+        real(8),dimension(2),parameter::cs1 = (/  13.0/12.0, 1.0/4.0 /)
+        real(8),dimension(2),parameter::cs2 = (/  13.0/12.0, 1.0/4.0 /)
+        real(8),dimension(2),parameter::cs3 = (/  13.0/12.0, 1.0/4.0 /) 
+
+        real(8),dimension(3),parameter::gamph = (/  1.0/10.0, 6.0/10.0, 3.0/10.0 /) 
+        real(8),dimension(3),parameter::gammh = (/  3.0/10.0, 6.0/10.0, 1.0/10.0 /) 
+
+        real(8),dimension(3),parameter::c1ph  = (/  1.0/3.0, -7.0/6.0,  11.0/6.0 /)
+        real(8),dimension(3),parameter::c2ph  = (/ -1.0/6.0,  5.0/6.0,   1.0/3.0 /)
+        real(8),dimension(3),parameter::c3ph  = (/  1.0/3.0,  5.0/6.0,  -1.0/6.0 /) 
+        
+        real(8),dimension(3),parameter::c1mh = (/  -1.0/6.0,  5.0/6.0,   1.0/3.0 /)
+        real(8),dimension(3),parameter::c2mh = (/   1.0/3.0,  5.0/6.0,  -1.0/6.0 /)
+        real(8),dimension(3),parameter::c3mh = (/  11.0/6.0, -7.0/6.0,   1.0/3.0 /)
+
+        real(8),parameter:: eps = 1.0d-6
+
+        real(8)::s1,s2,s3
+        real(8)::wt1ph,wt2ph,wt3ph,w1ph,w2ph,w3ph
+        real(8)::wt1mh,wt2mh,wt3mh,w1mh,w2mh,w3mh
+        real(8)::v1ph,v2ph,v3ph
+        real(8)::v1mh,v2mh,v3mh
+
+! Smoothness Indices of the stencils.
+!
+!        SI1 -> for stensil S1 = { i-2, i-1, i   }
+!        SI2 -> for stensil S2 = { i-1, i  , i+1 }
+!        SI2 -> for stensil S3 = { i  , i+1, i+2 }
+
+        s1 =    cs1(1)*( vc(1)-2.0*vc(2)+      vc(3) )**2 &
+             & +cs1(2)*( vc(1)-4.0*vc(2)+3.0d0*vc(3) )**2
+
+        s2 =    cs2(1)*( vc(2)-2.0*vc(3)+vc(4) )**2 &
+             & +cs2(2)*( vc(2)         -vc(4) )**2
+
+        s3 =    cs3(1)*(       vc(3)-2.0*vc(4)+vc(5) )**2 &
+             & +cs3(2)*( 3.0d0*vc(3)-4.0*vc(4)+vc(5) )**2
+
+        wt1ph = gamph(1)/(eps+s1)**2
+        wt2ph = gamph(2)/(eps+s2)**2
+        wt3ph = gamph(3)/(eps+s3)**2
+
+        w1ph =wt1ph/(wt1ph+wt2ph+wt3ph)
+        w2ph =wt2ph/(wt1ph+wt2ph+wt3ph)
+        w3ph =wt3ph/(wt1ph+wt2ph+wt3ph)
+
+        v1ph = c1ph(1)*vc(1) + c1ph(2)*vc(2) + c1ph(3)*vc(3)
+        v2ph = c2ph(1)*vc(2) + c2ph(2)*vc(3) + c2ph(3)*vc(4)
+        v3ph = c3ph(1)*vc(3) + c3ph(2)*vc(4) + c3ph(3)*vc(5)
+        vph =  w1ph*v1ph + w2ph*v2ph + w3ph*v3ph
+
+! 
+        wt1mh = gammh(1)/(eps+s1)**2
+        wt2mh = gammh(2)/(eps+s2)**2
+        wt3mh = gammh(3)/(eps+s3)**2
+
+        w1mh =wt1mh/(wt1mh+wt2mh+wt3mh)
+        w2mh =wt2mh/(wt1mh+wt2mh+wt3mh)
+        w3mh =wt3mh/(wt1mh+wt2mh+wt3mh)
+
+        v1mh = c1mh(1)*vc(1) + c1mh(2)*vc(2) + c1mh(3)*vc(3)
+        v2mh = c2mh(1)*vc(2) + c2mh(2)*vc(3) + c2mh(3)*vc(4)
+        v3mh = c3mh(1)*vc(3) + c3mh(2)*vc(4) + c3mh(3)*vc(5)
+        vmh =  w1mh*v1mh + w2mh*v2mh + w3mh*v3mh
+        return
+      end subroutine WENO
+
+      subroutine MP5(vc,vmh,vph)
+        implicit none
+        real(8),dimension(5),intent(in) :: vc
+! ph : plus half i+1/2
+! mh : minus half i-1/2 
+        real(8),intent(out) :: vmh,vph
         real(8),dimension(5),parameter:: ccph = (/  1.0d0/30.0d0, -13.0d0/60.0d0, 47.0d0/60.0d0,   9.0d0/20.0d0,  -1.0d0/20.0d0 /)
         real(8),dimension(5),parameter:: ccpm = (/ -1.0d0/20.0d0,   9.0d0/20.0d0, 47.0d0/60.0d0, -13.0d0/60.0d0,   1.0d0/30.0d0 /)
-        real(8) :: wwor,wwol,wwmp
-        real(8) :: djm1,dj,djp1,dm4jph,dm4jmh,qqul,qqmd,qqlc
-        real(8) :: dqp,dqm,qqmin,qqmax,qqlr
-        real(8) :: r
-        real(8) :: qqll
-        real(8) :: limiter
+        real(8) :: vor,vol,vmp,vul,vmd,vlc,vmin,vmax
+        real(8) :: dvp,dvm
+        real(8) :: djm1,dj,djp1,dm4jph,dm4jmh
         real(8),parameter :: Alpha = 4.0d0, BC2 = 4.0d0/3d0
-        real(8),parameter :: eps=1.0d-10,huge=1.0d10
+        real(8),parameter :: eps=1.0d-10
 
 ! interpolation for right side => 
-               wwor = sum(ccph(:)*wwc(:))
-               dqp = (wwc(4)-wwc(3))
-               dqm = (wwc(3)-wwc(2))
+               vor = sum(ccph(:)*vc(:))
+               dvp = (vc(4)-vc(3))
+               dvm = (vc(3)-vc(2))
                
-               wwmp = wwc(3)+minmod2(Alpha*dqm,dqp)
-               if( (wwor-wwc(3))*(wwor-wwmp) .le. eps)then
-                  torigt = wwor
+               vmp = vc(3)+minmod2(Alpha*dvm,dvp)
+               if( (vor-vc(3))*(vor-vmp) .le. eps)then
+                  vph = vor
                else
 
-                  qqul = wwc(3) + Alpha*dqm
+                  vul = vc(3) + Alpha*dvm
 
-                  djm1 = wwc(1) -2d0*wwc(2) + wwc(3)
-                  dj   = wwc(2) -2d0*wwc(3) + wwc(4)
-                  djp1 = wwc(3) -2d0*wwc(4) + wwc(5)           
+                  djm1 = vc(1) -2d0*vc(2) + vc(3)
+                  dj   = vc(2) -2d0*vc(3) + vc(4)
+                  djp1 = vc(3) -2d0*vc(4) + vc(5)           
 
                   dm4jph = minmod4(4.0d0*dj-djp1,4.0d0*djp1-dj,dj,djp1)
                   dm4jmh = minmod4(4.0d0*dj-djm1,4.0d0*djm1-dj,dj,djm1)
 
-                  qqmd = 0.5d0*(wwc(3)+wwc(4) - dm4jph)
-                  qqlc = wwc(3) + 0.5d0*(wwc(3)-wwc(2)) + BC2*dm4jmh
+                  vmd = 0.5d0*(vc(3)+vc(4) - dm4jph)
+                  vlc = vc(3) + 0.5d0*(vc(3)-vc(2)) + BC2*dm4jmh
 
-                  qqmin = max(min(wwc(3),wwc(4),qqmd),min(wwc(3),qqul,qqlc))
-                  qqmax = min(max(wwc(3),wwc(4),qqmd),max(wwc(3),qqul,qqlc))
+                  vmin = max(min(vc(3),vc(4),vmd),min(vc(3),vul,vlc))
+                  vmax = min(max(vc(3),vc(4),vmd),max(vc(3),vul,vlc))
 
-                  torigt = wwor + minmod2((qqmin-wwor),(qqmax-wwor))
+                  vph = vor + minmod2((vmin-vor),(vmax-vor))
                endif
 
 ! interpolation for left side  <= 
-               wwol = sum(ccpm(:)*wwc(:))
+               vol = sum(ccpm(:)*vc(:))
 
-               
-               dqm = (wwc(2)-wwc(3))
-               dqp = (wwc(3)-wwc(4))
+               dvm = (vc(2)-vc(3))
+               dvp = (vc(3)-vc(4))
 
-               wwmp = wwc(3) + minmod2(Alpha*dqp,dqm)
-               if( (wwol-wwc(3))*(wwol-wwmp) .le. eps)then
-                  toleft = wwol
+               vmp = vc(3) + minmod2(Alpha*dvp,dvm)
+               if( (vol-vc(3))*(vol-vmp) .le. eps)then
+!vmh:  v_i-1/2
+                  vmh = vol
                else
-                  qqul = wwc(3) + Alpha*dqp
+                  vul = vc(3) + Alpha*dvp
 
-                  djm1 = wwc(1) -2d0*wwc(2) + wwc(3)
-                  dj   = wwc(2) -2d0*wwc(3) + wwc(4)
-                  djp1 = wwc(3) -2d0*wwc(4) + wwc(5)           
+                  djm1 = vc(1) -2d0*vc(2) + vc(3)
+                  dj   = vc(2) -2d0*vc(3) + vc(4)
+                  djp1 = vc(3) -2d0*vc(4) + vc(5)           
 
                   dm4jph = minmod4(4.0d0*dj-djp1,4.0d0*djp1-dj,dj,djp1)
                   dm4jmh = minmod4(4.0d0*dj-djm1,4.0d0*djm1-dj,dj,djm1)
 
-                  qqmd = 0.5d0*(wwc(3)+wwc(2) - dm4jmh)
-                  qqlc = wwc(3) + 0.5d0*(wwc(3)-wwc(4)) + BC2*dm4jph
+                  vmd = 0.5d0*(vc(3)+vc(2) - dm4jmh)
+                  vlc = vc(3) + 0.5d0*(vc(3)-vc(4)) + BC2*dm4jph
            
-                  qqmin = max(min(wwc(3),wwc(2),qqmd),min(wwc(3),qqul,qqlc))
-                  qqmax = min(max(wwc(3),wwc(2),qqmd),max(wwc(3),qqul,qqlc))
-
-                  toleft = wwol + minmod2((qqmin-wwol),(qqmax-wwol))
+                  vmin = max(min(vc(3),vc(2),vmd),min(vc(3),vul,vlc))
+                  vmax = min(max(vc(3),vc(2),vmd),max(vc(3),vul,vlc))
+!vmh:  v_i-1/2
+                  vmh = vol + minmod2((vmin-vol),(vmax-vol))
                endif
 
         return
@@ -538,8 +609,8 @@ end module eosmod
       use fluxmod
       implicit none
       integer::i,j,k,n
-      real(8),dimension(5):: wwc
-      real(8):: toleft,torigt
+      real(8),dimension(5):: vc
+      real(8):: vph,vmh
       real(8),dimension(nhyd,in,jn,kn):: leftpr,rigtpr
       real(8),dimension(2*mflx+madd,in,jn,kn):: leftco,rigtco
       real(8),dimension(2*mflx+madd):: leftst,rigtst
@@ -549,10 +620,12 @@ end module eosmod
       do j=js,je
       do i=is-1,ie+1
          do n=1,nhyd
-            wwc(1:5) = svc(n,i-2:i+2,j,k)
-            call MP5(wwc,toleft,torigt)
-            leftpr(n,i+1,j,k) = torigt
-            rigtpr(n,i  ,j,k) = toleft
+            vc(1:5) = svc(n,i-2:i+2,j,k)
+!            call MP5(vc,vmh,vph)
+            call WENO(vc,vmh,vph)
+
+            leftpr(n,i+1,j,k) = vph
+            rigtpr(n,i  ,j,k) = vmh
 !            leftpr(n,i+1,j,k) = svc(n,i,j,k)
 !            rigtpr(n,i  ,j,k) = svc(n,i,j,k)
 !            write(6,*)"wwc",wwc
@@ -644,8 +717,8 @@ end module eosmod
       use fluxmod
       implicit none
       integer::i,j,k,n
-      real(8),dimension(5):: wwc
-      real(8):: toleft,torigt
+      real(8),dimension(5):: vc
+      real(8):: vmh,vph
       real(8),dimension(nhyd,in,jn,kn):: leftpr,rigtpr
       real(8),dimension(2*mflx+madd,in,jn,kn):: leftco,rigtco
       real(8),dimension(2*mflx+madd):: leftst,rigtst
@@ -655,10 +728,12 @@ end module eosmod
       do i=is,ie
       do j=js-1,je+1
          do n=1,nhyd
-            wwc(1:5) = svc(n,i,j-2:j+2,k)
-            call MP5(wwc,toleft,torigt)
-            leftpr(n,i,j+1,k) = torigt
-            rigtpr(n,i,j  ,k) = toleft
+            vc(1:5) = svc(n,i,j-2:j+2,k)
+            call MP5(vc,vmh,vph)
+            call WENO(vc,vmh,vph)
+
+            leftpr(n,i,j+1,k) = vph
+            rigtpr(n,i,j  ,k) = vmh
 !            leftpr(n,i+1,j,k) = svc(n,i,j,k)
 !            rigtpr(n,i  ,j,k) = svc(n,i,j,k)
 !            write(6,*)"wwc",wwc
