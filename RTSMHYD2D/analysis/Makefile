@@ -44,6 +44,7 @@ endif
 
 # 2D cross section
 DEN   = $(patsubst ${dird}/unf%.dat,${dira}/den%.dat,$(BIN))
+DENPNG= $(patsubst ${dira}/den%.dat,${dirf}/den%.png,$(DEN))
 
 # intgrated values 
 TOT   = $(patsubst ${dird}/unf%.dat,${dira}/tot%.dat,$(BIN))
@@ -99,10 +100,10 @@ ${denmovie}: MakeMovie.sh ${DENPNG}
 # 2D cross section
 ########################
 
-2Dsnaps: ${VORPNG} ${KINPNG} 
-
 ${DENPNG}: den.plt MakeSnap.sh ${DEN}
 	./MakeSnap.sh den den.plt
+
+2Dsnaps: ${DENPNG} 
 
 #################
 # analysis

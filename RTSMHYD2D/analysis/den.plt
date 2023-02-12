@@ -78,25 +78,6 @@ set palette define (-1.0 "blue", 0.0 "white", 1.0 "red")
 splot  \
   ifnames u ($2):($1):3 w pm3d  \
 
-##########################
-# Kinetic energy
-##########################
-
-#set title "Kinetic energy"
-
-ofname = sprintf("figures/kin%05d.png",ifnum)
-set output ofname
-
-
-#maxcb=2.0
-#set cbrange [0:maxcb]
-set cbrange [*:*]
-
-set palette define (0.0 "white", 1.0 "black")
-
-splot  \
-  ifnames u ($2):($1):4 w pm3d  \
-
 unset label 1
 
 reset
