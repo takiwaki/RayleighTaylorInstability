@@ -112,14 +112,6 @@ subroutine Visualize2D
   endif
 
   k=1
-  do j=js,je
-  do i=is,ie 
-     kin(i,j,k)= 0.5d0*d(i,j,k)*( &
-               & +v1(i,j,k)*v1(i,j,k) &
-               & +v2(i,j,k)*v2(i,j,k) &
-               & )
-  enddo
-  enddo
 
   write(filename,'(a3,i5.5,a4)')"den",incr,".dat"
   filename = trim(dirname)//filename
@@ -129,13 +121,12 @@ subroutine Visualize2D
   write(unit2D,'(1a,4(1x,a8))') "#","1:x    ","2:y     ","3:den ","4:E_kin "
   do j=js,je
   do i=is,ie
-     write(unit2D,'(4(1x,E12.3))') x1b(i),x2b(j),d(i,j,k),kin(i,j,k)
+     write(unit2D,'(4(1x,E12.3))') x1b(i),x2b(j),d(i,j,k)
   enddo
      write(unit2D,*)
   enddo
 
   close(unit2D)
-
 
   return
 end subroutine Visualize2D
