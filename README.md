@@ -2,7 +2,7 @@
 
 # How to download
     
-    git clone  git@github.com:takiwaki/RayleighTaylorInstability v1
+    git clone -b dosss git@github.com:takiwaki/RayleighTaylorInstability v1
    
 
 ## Description
