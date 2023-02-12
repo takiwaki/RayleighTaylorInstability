@@ -1,12 +1,11 @@
 ##########################################
-# Makefile for Turbulence Studies
+# Makefile for Rayleigh Taylor Instability
 ##########################################
 
 ##########################################
 # Programs
 ##########################################
 
-exe=Simulation.x
 ana=Analysis.x
 
 ######################	
@@ -24,7 +23,7 @@ fopt=-g -traceback -check all -fpe0
 # directory
 ######################
 
-dird := bindata
+dird := ../bindata
 dira := output
 dirf := figures
 dirm := movies
@@ -167,20 +166,14 @@ ${SPC}: ${ana} ${BIN} ${countfile}
 # simulation
 #################
 
-${BIN}: ${exe}
-	./${exe}
-
 ${ana}: Analysis.f90
 	${fc} ${fopt} $< -o ${ana}
-
-${exe}: Simulation.f90
-	${fc} ${fopt} $< -o ${exe}
 
 #################
 # clean up
 #################
 clean:
-	rm -f ${exe} ${ana} *.o *.mod *~
+	rm -f ${ana} *.o *.mod *~
 
 allclean:
-	rm -fr ${dirm} ${dirf} ${dird} ${dira} ${countfile}
+	rm -fr ${dirm} ${dirf} ${dira} ${countfile}

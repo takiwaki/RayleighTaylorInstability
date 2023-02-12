@@ -41,7 +41,7 @@ end program data_analysis
 subroutine ReadData
   use fieldmod
   implicit none   
-  character(20),parameter::dirname="bindata/"
+  character(20),parameter::dirname="../bindata/"
   character(40)::filename
   integer,parameter::unitinp=13
   integer,parameter::unitbin=14
