@@ -49,12 +49,12 @@ If you need 2D snapshots.
     
     make 2Dsnaps
    
-Using `output/vor*.dat`, image files are made and save as `figures/vor*.png`.
+Using `output/vor*.dat`, image files are made and save as `figures/den*.png`.
 To make movie from the files. Type as follows.
 
     make movies
    
-The movie files in saved in `movie/anivor`.
+The movie files in saved in `movie/aniden.mp4`.
 
 ### Do all of them
 To do all in one command, you just type `make` or `make all`.
