@@ -11,6 +11,8 @@ module fieldmod
     real(8),dimension(:,:,:),allocatable:: d,v1,v2,v3,p,gp
     real(8),dimension(:,:,:),allocatable:: kin
     real(8):: dx,dy
+    real(8):: denup,dendn
+
 end module fieldmod
 
 program data_analysis
@@ -55,6 +57,7 @@ subroutine ReadData
   read(unitinp,*) dummy,time,dt
   read(unitinp,*) dummy,izone,igs
   read(unitinp,*) dummy,jzone,jgs
+  read(unitinp,*) dummy,denup,dendn
   close(unitinp)
   in=izone+2*igs
   jn=jzone+2*jgs
@@ -160,7 +163,7 @@ subroutine MixingRate
 
   mixd=0.0d0
   do i=is,ie
-     mixd = mixd + (aved(i)-1.0d0)*(2.0d0-aved(i))*(x1a(i+1)-x1a(i))/(x1a(ie+1)-x1a(is))
+     mixd = mixd + (aved(i)-dendn)*(denup-aved(i))*(x1a(i+1)-x1a(i))/(x1a(ie+1)-x1a(is))
   enddo
 
   write(filename,'(a3,i5.5,a4)')"var",incr,".dat"

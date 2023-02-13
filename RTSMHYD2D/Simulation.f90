@@ -3,10 +3,10 @@
       integer::nhy
       integer,parameter::nhymax=6000000
       real(8)::time,dt
-      real(8),parameter:: Coul=0.03d0
+      real(8),parameter:: Coul=0.1d0
       data time / 0.0d0 /
       real(8),parameter:: timemax=15.0d0
-      real(8),parameter:: dtout=timemax/500
+      real(8),parameter:: dtout=timemax/100
 
       integer,parameter::izones=150
       integer,parameter::jzones=50
@@ -30,6 +30,10 @@
       real(8),dimension(in,jn,kn)::d,et,mv1,mv2,mv3
       real(8),dimension(in,jn,kn)::p,ei,v1,v2,v3,cs
       real(8),dimension(in,jn,kn)::gp,gp1a,gp2a
+
+
+      real(8)::denup,dendn
+      
       end module commons
      
       module eosmod
@@ -129,6 +133,9 @@ end module eosmod
       real(8)::pi
       pi=acos(-1.0d0)
 
+      denup=RU
+      dendn=RD
+      
       d(:,:,:) = 1.0d0
 
       do i=1,in-1
@@ -984,6 +991,7 @@ end module eosmod
       write(unitout,*) "# ",time,dt
       write(unitout,*) "# ",izones,gs
       write(unitout,*) "# ",jzones,gs
+      write(unitout,*) "# ",denup,dendn
       close(unitout)
 
       x1out(is-gs:ie+gs,1) = x1b(is-gs:ie+gs)
