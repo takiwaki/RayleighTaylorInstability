@@ -1,4 +1,4 @@
-# 2D Rayleigh-Taylor Instability
+# 2D single mode Rayleigh-Taylor Instability
 
 [Go to top](../README.md)  
 
@@ -18,7 +18,7 @@ To run the code, you need to compile 'Simulation.f90'.
     cd RayleighTaylorInstability/RTSMHYD2D
     make Simulation.x
     
-Then `Simulation.x`is made in this directory.
+Then `Simulation.x` is made in this directory.
 
 ### run
 Let's run the code.
@@ -45,7 +45,7 @@ Then preparation is done. Run the analyis.
     
 The output is saved in `output/`.
 ### 2D plots and animation.
-If you need 2D snapshots. 
+If you need 2D snapshots, use the following command. Using output/rtp*.dat (Radial and Theta Pofile), image files are made and save as figures/*.png (e.g., dnt00050.png).
     
     make 2Dsnaps
    
