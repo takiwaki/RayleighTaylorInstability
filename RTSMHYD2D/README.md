@@ -13,7 +13,7 @@ Then copy the source code.
 
     cd /cfca-work/<your account>
     cp -r /cfca-work/dos00/RayleighTaylorInstability .
-To run the code, you need to compile 'Simulation.f90'.
+To run the code, you need to compile `Simulation.f90`.
     
     cd RayleighTaylorInstability/RTSMHYD2D
     make Simulation.x
