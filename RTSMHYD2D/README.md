@@ -45,7 +45,13 @@ Then preparation is done. Run the analyis.
     
 The output is saved in `output/`.
 ### 2D plots and animation.
-If you need 2D snapshots, use the following command. Using output/rtp*.dat (Radial and Theta Pofile), image files are made and save as figures/*.png (e.g., dnt00050.png).
+If you need 2D snapshots, use the following command. Using output/den*.dat, image files are made and save as figures/den*.png.
+    
+    gnuplot rttpro.plt
+    ls figures/
+    display dnt00050.png
+    
+All snapshots are made by the following command. 
     
     make 2Dsnaps
    
@@ -55,6 +61,10 @@ To make movie from the files. Type as follows.
     make movies
    
 The movie files in saved in `movie/aniden.mp4`.
+
+    ls movies/
+    mplayor movies/ani???.mp4
+    
 
 ### Do all of them
 To do all in one command, you just type `make` or `make all`.
