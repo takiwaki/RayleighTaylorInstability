@@ -17,7 +17,7 @@
       real(8)::time,dt
       real(8),parameter:: Coul=0.25d0
       data time / 0.0d0 /
-      real(8),parameter:: timemax=1.0d5*year
+      real(8),parameter:: timemax=1.0d2 ! 1000 s
       real(8),parameter:: dtout=timemax/500
 
       integer,parameter::izones=200
@@ -34,7 +34,7 @@
      &                  ,ke=1
 
 
-      real(8),parameter:: x1min=0.0d0,x1max=1.0d2*pc
+      real(8),parameter:: x1min=1.0d8,x1max=1.0d10 ! cm
       real(8),dimension(in)::x1a,x1b,dvl1a
 
       real(8),parameter:: x2min=0.0d0,x2max=acos(-1.0)
@@ -152,50 +152,49 @@ end module eosmod
       real(8):: ein0
       real(8):: pre1,pre2
       real(8):: vel1,vel2
-      real(8):: dr
+      real(8):: Rexp,vol
       real(8):: pi
       real(8):: frac,eexp
-      real(8):: dr2
      
       integer,dimension(2) :: seed
       real(8),dimension(1) :: rnum
       real(8),parameter :: rrv =1.0d-1
       
       pi =acos(-1.0d0)
-      dr = 8.0d0*(x1a(is+1)-x1a(is)) ! 8 mesh
-      write(6,*) "shell length [pc]",dr/pc
-      dr2= 5.0d0*dr
+      Rexp = 2000e5 ! 2000km
       
-! circum steller  medium
-      rho2 = 1.0d0*mu ! Intersteller medium 1 [1/cm^3]
-      pre2 = rho2* kbol *1.0d4 ! 10^4 [K]
-      vel2 = 0.0d0
-
 ! blast wave
       frac = 0.8d0
-      rho1 = (10.0d0*Msolar)/(4.0*pi/3.0d0*dr**3)
+      vol  = (4.0*pi/3.0d0*Rexp**3-4.0*pi/3.0d0*x1min**3)
+      rho1 = (1.0d0*Msolar)/vol
       eexp = frac*(1.0d51)
-      pre1 = eexp/(4.0*pi/3.0d0*dr**3)*(gam-1.0d0)  
-      vel1 = sqrt((1.0d0-frac)*eexp/(4.0*pi/3.0d0*dr**3)/rho1)
+      pre1 = eexp/(vol)*(gam-1.0d0)  
+      vel1 = sqrt((1.0d0-frac)*eexp/vol/rho1)
 
+      rho2 = 1.0d-4*rho1 ! [g/cm^3]
+      pre2 = 1.0d-4*pre1 !
+      vel2 = 0.0d0
+
+      
+      write(6,*) "Exploding Regin [cm]",Rexp
       write(6,*) "Eex= ",frac   ,"[10^51 erg]"
-      write(6,*) "rho= ",rho1/mu,"[1/cm^3]"
-      write(6,*) "vel= ",vel1   ,"[cm/s]"
+      write(6,*) "rho= ",rho1   ,"[g/cm^3]"
       write(6,*) "pre= ",pre1   ,"[erg/cm^3]"
-     
+      write(6,*) "vel= ",vel1   ,"[cm/s]"
+      
+      write(6,*) "outside"
+      write(6,*) "rho= ",rho2   ,"[g/cm^3]"
+      write(6,*) "pre= ",pre2   ,"[erg/cm^3]"
+    
       d(:,:,:) = rho2
   
       do k=ks,ke
       do j=js,je
       do i=is,ie
-         if(x1b(i) < dr)then
-             d(i,j,k) = rho2*(dr/dr2)**(-4)
+         if(x1b(i) < Rexp)then
+             d(i,j,k) = rho1
              p(i,j,k) = pre1
-            v1(i,j,k) = 0.0d0
-         else if( dr <x1b(i) .and. x1b(i) < dr2 )then
-             d(i,j,k) = rho2*(x1b(i)/dr2)**(-4)
-             p(i,j,k) = pre1
-            v1(i,j,k) = vel1*max(x1b(i)/dr,0.0d0)
+            v1(i,j,k) = vel1*(x1b(i)/Rexp)
          else
              d(i,j,k) = rho2
              p(i,j,k) = pre2

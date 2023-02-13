@@ -162,13 +162,13 @@ subroutine Visualize2D
   filename = trim(dirname)//filename
   open(unit2D,file=filename,status='replace',form='formatted')
 
-  write(unit2D,'(1a,4(1x,E12.3))') "#",time/year
+  write(unit2D,'(1a,1(1x,E12.3),a4)') "#",time," [s]"
 !                                    12345678    1234567890123   1234567890123   123456789012
-  write(unit2D,'(1a,5(1x,a13))') "#","1:r[pc] ","2:theta[rad] ","3:den[1/cm^3] ","4:p[erg/cm3] ","5:vel[km/s] "
+  write(unit2D,'(1a,5(1x,a13))') "#","1:r[cm] ","2:theta[rad] ","3:den[g/cm^3] ","4:p[erg/cm3] ","5:vel[cm/s] "
 
   do j=js,je+1
   do i=is,ie
-     write(unit2D,'(1x,5(1x,E13.3))') x1b(i)/pc,x2a(j),d2d(i,j)/mu,p2d(i,j),v12d(i,j)/1.0d5
+     write(unit2D,'(1x,5(1x,E13.3))') x1b(i),x2a(j),d2d(i,j),p2d(i,j),v12d(i,j)
   enddo
      write(unit2D,*)
   enddo

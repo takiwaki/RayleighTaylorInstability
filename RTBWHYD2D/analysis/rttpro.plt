@@ -4,7 +4,7 @@
 ##########################################
 
 # Range of the plot [pc]
-srange=100
+srange=1e10
 
 # Format of the output
 pngflag=1
@@ -84,10 +84,10 @@ unset origin
 
 # vertical and horizontal axis
 set origin 0.0,0.0
-set xlabel "X [km]" offset 0,0
-set xtics 50
-set ylabel "Z [km]" offset 0,0
-set ytics 50
+set xlabel "X [cm]" offset 0,0
+#set xtics 50
+set ylabel "Z [cm]" offset 0,0
+#set ytics 50
 vr=srange/10
 
 # Position of color bar
@@ -96,9 +96,9 @@ set cbtics offset 0,3.2
 
 # Range of color bar
 # range of the variable
-cmin=0
-cmax=5
-set cbrange [cmin:cmax]
+#cmin=0
+#cmax=5
+#set cbrange [cmin:cmax]
 
 ####################
 # Plot
