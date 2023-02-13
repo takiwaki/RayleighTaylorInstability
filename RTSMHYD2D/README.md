@@ -55,7 +55,6 @@ All snapshots are made by the following command.
     
     make 2Dsnaps
    
-Using `output/vor*.dat`, image files are made and save as `figures/den*.png`.
 To make movie from the files. Type as follows.
 
     make movies
