@@ -59,7 +59,7 @@ To make movie from the files. Type as follows.
 
     make movies
    
-The movie files in saved in `movie/aniden.mp4`.
+The movie files are saved in `movie/aniden.mp4`.
 
     ls movies/
     mplayor movies/ani???.mp4
