@@ -23,7 +23,7 @@ srange=0.5
 
 # PNG
 if (exist("ifnum")==0 ) set term push
-set term pngcairo enhanced font "Helvetica, 12" size 600,300
+set term pngcairo enhanced font "Helvetica, 12" size 600,400
 # crop 
 
 if (exist("ifnum")==0 ) ifnum=100
