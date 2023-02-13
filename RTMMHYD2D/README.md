@@ -1,34 +1,42 @@
-# 2D hydrodynamic deacaying turbulence
+# 2D multi mode Rayleigh-Taylor Instability
 
 [Go to top](../README.md)  
-
-## Setups and Results
-[Go to Notion page.](https://www.notion.so/Turbulence-Studies-e4836ad642684f8f992d54a1f7e22635#97db0fffb85541a891157c14669bd36e)
 
 ## How to run
 
 ### compile 
-To run the code, you need to compile 'Simulation.f90'.
+This is the instruction for spring school of division of science. First login the server, more.
+
+    ssh <your account>@more.cfca.nao.ac.jp
     
+Then copy the source code.
+
+    cd /cfca-work/<your account>
+    cp -r /cfca-work/dos00/RayleighTaylorInstability .
+To run the code, you need to compile `Simulation.f90`.
+    
+    cd RayleighTaylorInstability/RTSMHYD2D
     make Simulation.x
     
-Then `Simulation.x`is made in this directory.
+Then `Simulation.x` is made in this directory.
 
 ### run
 Let's run the code.
     
-    ./Simulation.x
+    qsub pbs_more.sh
     
 The simulation data is saved in `bindata/`.
 
 ### analysis
-To analyze the data, let us make `Analysis.x`.
+GO to analysis server. Here ?? below is 09-14. To analyze the data, let us make `Analysis.x`.
     
+    ssh <your account>@an??.cfca.nao.ac.jp
+    cd /cfca-work/<your account>/RayleighTaylorInstability/RTSMHYD2D/analysis .
     make Analysis.x
     
 Now you have many time-snapshots of data. To count it, use a script.
     
-    CountBindata.sh
+    ./CountBindata.sh
    
 See the file, `cat control.dat`. You can know the number of files.
 Then preparation is done. Run the analyis.
@@ -37,22 +45,27 @@ Then preparation is done. Run the analyis.
     
 The output is saved in `output/`.
 ### 2D plots and animation.
-If you need 2D snapshots. 
+If you need 2D snapshots, use the following command. Using output/den*.dat, image files are made and save as figures/den*.png.
+    
+    gnuplot rttpro.plt
+    ls figures/
+    display dnt00050.png
+    
+All snapshots are made by the following command. 
     
     make 2Dsnaps
    
-Using `output/vor*.dat`, image files are made and save as `figures/vor*.png`.
+Using `output/vor*.dat`, image files are made and save as `figures/den*.png`.
 To make movie from the files. Type as follows.
 
-    make movie
+    make movies
    
-The movie files in saved in `movie/anivor`.
+The movie files in saved in `movie/aniden.mp4`.
 
-### spectrum
-To obtain the spectrum
-   
-      make spectrum
-      
+    ls movies/
+    mplayor movies/ani???.mp4
+    
+
 ### Do all of them
 To do all in one command, you just type `make` or `make all`.
    
