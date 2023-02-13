@@ -23,10 +23,10 @@ srange=0.5
 
 # PNG
 if (exist("ifnum")==0 ) set term push
-set term pngcairo enhanced font "Helvetica, 12" size 600,400
+set term pngcairo enhanced font "Helvetica, 12" size 600,350
 # crop 
 
-if (exist("ifnum")==0 ) ifnum=100
+if (exist("ifnum")==0 ) ifnum=50
 
 ifnames = sprintf("output/den%05d.dat",ifnum)
 
@@ -40,7 +40,7 @@ time   = system(command)
 print "time= ".time
 
 # Position of color bar
-set colorbox horizontal user origin 0.3, 0.87 size 0.4, 0.04
+set colorbox horizontal user origin 0.3, 0.84 size 0.4, 0.04
 #set cbtics 1.0
 set cbtics offset 0,3.2
 
@@ -71,7 +71,7 @@ ofname = sprintf("figures/den%05d.png",ifnum)
 set output ofname
 
 
-set label 1 time at screen 0.45, screen 0.845
+set label 1 time at screen 0.45, screen 0.8
 
 set palette define (-1.0 "blue", 0.0 "white", 1.0 "red")
 
