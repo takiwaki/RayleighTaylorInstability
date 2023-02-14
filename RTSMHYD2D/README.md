@@ -64,6 +64,11 @@ The movie files are saved in `movie/aniden.mp4`.
     ls movies/
     mplayor movies/ani???.mp4
     
+### Evaluate velocity squared
+     
+     make t-vsq.png
+     display t-vsq.png
+     
 
 ### Do all of them
 To do all in one command, you just type `make` or `make all`.
