@@ -63,7 +63,7 @@ moviefile=${2Dmovies}
 # Time evolution
 ##########################################
 
-timefile=t-Gamma.png
+timefile=t-vsq.png t-W.png
 
 ##########################################
 # Proceadures

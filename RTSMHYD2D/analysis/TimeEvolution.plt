@@ -22,15 +22,24 @@ set style line 92 lt 2 lw 6 lc rgb "black" #
 
 input= "t-prof.dat"
 
-outputfile= "t-E.png"
+outputfile= "t-vsq.png"
 if(pngflag==1)set output outputfile
 
 set xlabel "Time"
-set log x
+set ylabel "v^2"
 
 plot NaN notitle \
-, input  u 1:2  title "Kinetic energy" w l ls 1  \
-, input  u 1:($3/10000)  title "Enstrophy (1/10000)" w l ls 3  \
+, input  u 1:2  notitle "v^2" w l ls 1  \
+
+
+outputfile= "t-W.png"
+if(pngflag==1)set output outputfile
+
+set ylabel "W"
+
+plot NaN notitle \
+, input  u 1:3  notitle "v^2" w l ls 1  \
+
 
 reset
 set term pop

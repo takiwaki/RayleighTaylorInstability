@@ -140,6 +140,7 @@ subroutine MixingRate
   integer::i,j,k
   real(8),dimension(:),allocatable,save:: aved
   real(8)                               :: mixd
+  real(8)                               :: vsq
 
   character(20),parameter::dirname="output/"
   character(40)::filename
@@ -154,33 +155,34 @@ subroutine MixingRate
      is_inited = .true.
   endif
   k=1
+
+
   do i=is,ie
      aved(i) = 0.0d0
   do j=js,je 
-     aved(i) = aved(i) + d(i,j,k)*(x2a(j+1)-x2a(j))/(x2a(je+1)-x2a(js))
+     aved(i) = aved(i) + d(i,j,k)*(x2a(j+1)-x2a(j))
   enddo
+     aved(i) = aved(i)/(x2a(je+1)-x2a(js))
   enddo
 
-  mixd=0.0d0
+     mixd = 0.0d0
   do i=is,ie
-     mixd = mixd + (aved(i)-dendn)*(denup-aved(i))*(x1a(i+1)-x1a(i))/(x1a(ie+1)-x1a(is))
+     mixd = mixd + (aved(i)-dendn)*(denup-aved(i))*(x1a(i+1)-x1a(i))
   enddo
+     mixd = mixd/(x1a(ie+1)-x1a(is))
 
-  write(filename,'(a3,i5.5,a4)')"var",incr,".dat"
-  filename = trim(dirname)//filename
-  open(unit1D,file=filename,status='replace',form='formatted')
-
-  write(unit1D,'(1a,4(1x,E12.3))') "#",time
-  write(unit1D,'(1a,4(1x,a8))') "#","1:x    ","2:y     ","3:den "
+     vsq=0.0d0
+  do j=js,je
   do i=is,ie
-     write(unit1D,'(4(1x,E12.3))') x1b(i),aved(i)
+     vsq = vsq +v1(i,j,k)**2*(x1a(i+1)-x1a(i))*(x2a(j+1)-x2a(j))
   enddo
-  close(unit1D)
+  enddo
+     vsq = vsq/(x1a(ie+1)-x1a(is))/(x2a(je+1)-x2a(js))
 
   write(filename,'(a3,i5.5,a4)')"tot",incr,".dat"
   filename = trim(dirname)//filename
   open(unittime,file=filename,status='replace',form='formatted')
-  write(unittime,'(4(1x,E12.3))') time,mixd
+  write(unittime,'(4(1x,E12.3))') time,vsq,mixd
   close(unittime)
 
   return
