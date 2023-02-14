@@ -64,10 +64,10 @@ The movie files are saved in `movie/aniden.mp4`.
     ls movies/
     mplayor movies/ani???.mp4
     
-### Evaluate velocity squared
+### Evaluate mixing rate
      
-     make t-vsq.png
-     display t-vsq.png
+     make t-W.png
+     display t-W.png
      
 
 ### Do all of them
