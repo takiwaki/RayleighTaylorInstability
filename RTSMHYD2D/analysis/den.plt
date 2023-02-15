@@ -26,7 +26,7 @@ if (exist("ifnum")==0 ) set term push
 set term pngcairo enhanced font "Helvetica, 12" size 300,500
 # crop 
 
-if (exist("ifnum")==0 ) ifnum=100
+if (exist("ifnum")==0 ) ifnum=50
 
 ifnames = sprintf("output/den%05d.dat",ifnum)
 
