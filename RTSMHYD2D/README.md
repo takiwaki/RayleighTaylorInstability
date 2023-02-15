@@ -31,7 +31,7 @@ The simulation data is saved in `bindata/`.
 GO to analysis server. Here ?? below is 09-14. To analyze the data, let us make `Analysis.x`.
     
     ssh <your account>@an??.cfca.nao.ac.jp
-    cd /cfca-work/<your account>/RayleighTaylorInstability/RTSMHYD2D/analysis .
+    cd /cfca-work/<your account>/RayleighTaylorInstability/RTSMHYD2D/analysis
     make Analysis.x
     
 Now you have many time-snapshots of data. To count it, use a script.
@@ -47,7 +47,7 @@ The output is saved in `output/`.
 ### 2D plots and animation.
 If you need 2D snapshots, use the following command. Using output/den*.dat, image files are made and save as figures/den*.png.
     
-    gnuplot rttpro.plt
+    gnuplot den.plt
     ls figures/
     display dnt00050.png
     
