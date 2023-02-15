@@ -51,7 +51,7 @@ If you need 2D snapshots, use the following command. Using output/den*.dat, imag
     
     gnuplot den.plt
     ls figures/
-    display figures/dnt00050.png
+    display figures/den00050.png
     
 All snapshots are made by the following command. 
     
