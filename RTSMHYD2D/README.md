@@ -16,6 +16,7 @@ Then copy the source code.
 To run the code, you need to compile `Simulation.f90`.
     
     cd RayleighTaylorInstability/RTSMHYD2D
+    module load intel
     make Simulation.x
     
 Then `Simulation.x` is made in this directory.
@@ -24,6 +25,7 @@ Then `Simulation.x` is made in this directory.
 Let's run the code.
     
     qsub pbs_more.sh
+    qstat -u <your account>
     
 The simulation data is saved in `bindata/`.
 
