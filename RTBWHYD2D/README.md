@@ -15,7 +15,8 @@ Then copy the source code.
     cp -r /cfca-work/dos00/RayleighTaylorInstability .
 To run the code, you need to compile `Simulation.f90`.
     
-    cd RayleighTaylorInstability/RTBWHYD2D/ 
+    cd RayleighTaylorInstability/RTBWHYD2D/
+    module load intel/2022
     make Simulation.x
     
 Then `Simulation.x`is made in this directory.
