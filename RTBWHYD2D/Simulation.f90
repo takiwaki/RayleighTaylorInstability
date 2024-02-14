@@ -1113,7 +1113,7 @@
       use commons
       use fluxmod
       implicit none
-      integer::i,j,k
+      integer::i,j,k,n
       real(8),dimension(in),save::as1,dv1i
       real(8),dimension(jn),save::as2,dv2i
       logical,save:: is_inited
@@ -1201,10 +1201,13 @@
      &   + nflux2(meto+1:mflx,i,j  ,k)*as2(j  )           &
      &  )*dv2i(j)*0.5d0*(as1(i+1)-as1(i))* dv1i(i) &
      &      )
-          
+         do n=1,ncomp
+            DXcomp(n,i,j,k) = max(0.0d0,DXcomp(n,i,j,k))
+         enddo
       enddo
       enddo
-      enddo
+     enddo
+!     stop
 !$end omp parallel
       
       return

@@ -28,12 +28,18 @@ dird := bindata
 #################
 # simulation
 #################
+compile: ${exe} ## Compile the prgram
 
-${exe}: Simulation.f90
+${exe}: Simulation.f90 
 	${fc} ${fopt} $< -o ${exe}
 
 #################
 # clean up
 #################
-clean:
+.PHONY: clean
+clean: ## Delete intermdediate files for compile
 	rm -f ${exe} *.o *.mod *~
+
+.PHONY: help
+help: ## Display this help screen
+	@grep -E '^[a-zA-Z_-]+:.*?## .*$$' $(MAKEFILE_LIST) | awk 'BEGIN {FS = ":.*?## "}; {printf "\033[36m%-20s\033[0m %s\n", $$1, $$2}'
