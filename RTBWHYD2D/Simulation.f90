@@ -47,8 +47,8 @@
       real(8),dimension(in,jn,kn)::gp,gp1a,gp2a
 
       integer,parameter::ncomp=3 ! composition
-      real(8),dimension(in,jn,kn):: DXcomp(ncomp,in,jn,kn)
-      real(8),dimension(in,jn,kn)::  Xcomp(ncomp,in,jn,kn)
+      real(8),dimension(ncomp,in,jn,kn):: DXcomp
+      real(8),dimension(ncomp,in,jn,kn)::  Xcomp
 
       end module commons
      
@@ -587,7 +587,7 @@
      &                     +leftpr(nve2,i,j,k)**2   &
      &                     +leftpr(nve3,i,j,k)**2)
          
-         leftco(muet+1:muet+ncomp,i,j,k)=leftpr(muet+1:muet+ncomp,i,j,k)*leftpr(nden,i,j,k) ! rho X
+         leftco(muet+1:muet+ncomp,i,j,k)=leftpr(nene+1:nene+ncomp,i,j,k)*leftpr(nden,i,j,k) ! rho X
 
          leftco(mfdn,i,j,k)=leftpr(nden,i,j,k)                   *leftpr(nve1,i,j,k)
          leftco(mfvu,i,j,k)=leftpr(nden,i,j,k)*leftpr(nve1,i,j,k)*leftpr(nve1,i,j,k) &
@@ -602,7 +602,7 @@
      &                     +leftpr(npre,i,j,k)     &
      &                       )                                  *leftpr(nve1,i,j,k)
          
-         leftco(mfet+1:mfet+ncomp,i,j,k)=leftpr(muet+1:muet+ncomp,i,j,k)*leftpr(nve1,i,j,k)
+         leftco(mfet+1:mfet+ncomp,i,j,k)=leftco(muet+1:muet+ncomp,i,j,k)*leftpr(nve1,i,j,k)
 
          leftco(mcsp,i,j,k)= leftpr(ncsp,i,j,k)
          leftco(mvel,i,j,k)= leftpr(nve1,i,j,k)
@@ -619,7 +619,7 @@
      &                     +rigtpr(nve2,i,j,k)**2 &
      &                     +rigtpr(nve3,i,j,k)**2)
 
-         rigtco(muet+1:muet+ncomp,i,j,k) = rigtpr(muet+1:muet+ncomp,i,j,k) * rigtpr(nden,i,j,k) ! rho X
+         rigtco(muet+1:muet+ncomp,i,j,k) = rigtpr(nene+1:nene+ncomp,i,j,k) * rigtpr(nden,i,j,k) ! rho X
 
          rigtco(mfdn,i,j,k)=rigtpr(nden,i,j,k)                   *rigtpr(nve1,i,j,k)
          rigtco(mfvu,i,j,k)=rigtpr(nden,i,j,k)*rigtpr(nve1,i,j,k)*rigtpr(nve1,i,j,k) &
@@ -634,7 +634,7 @@
      &                     +rigtpr(npre,i,j,k)     &
      &                      )                                    *rigtpr(nve1,i,j,k)
          
-         rigtco(mfet+1:mfet+ncomp,i,j,k)=rigtpr(muet+1:muet+ncomp,i,j,k)*rigtpr(nve1,i,j,k)
+         rigtco(mfet+1:mfet+ncomp,i,j,k)=rigtco(muet+1:muet+ncomp,i,j,k)*rigtpr(nve1,i,j,k)
 
          rigtco(mcsp,i,j,k)= rigtpr(ncsp,i,j,k)
          rigtco(mvel,i,j,k)= rigtpr(nve1,i,j,k)
@@ -757,7 +757,7 @@
      &                     +leftpr(nve2,i,j,k)**2 &
      &                     +leftpr(nve3,i,j,k)**2)
 
-         leftco(muet+1:muet+ncomp,i,j,k)=leftpr(muet+1:muet+ncomp,i,j,k)*leftpr(nden,i,j,k)
+         leftco(muet+1:muet+ncomp,i,j,k)=leftpr(nene+1:nene+ncomp,i,j,k)*leftpr(nden,i,j,k)
          
          leftco(mfdn,i,j,k)=leftpr(nden,i,j,k)                   *leftpr(nve2,i,j,k) ! rho v
          leftco(mfvw,i,j,k)=leftpr(nden,i,j,k)*leftpr(nve1,i,j,k)*leftpr(nve2,i,j,k)
@@ -771,7 +771,7 @@
      &                     +leftpr(nve3,i,j,k)**2) &
      &                     +leftpr(npre,i,j,k)     &
      &                                       )*leftpr(nve2,i,j,k)
-         leftco(mfet+1:mfet+ncomp,i,j,k)=leftpr(muet+1:muet+ncomp,i,j,k)*leftpr(nve2,i,j,k) ! rho X v
+         leftco(mfet+1:mfet+ncomp,i,j,k)=leftco(muet+1:muet+ncomp,i,j,k)*leftpr(nve2,i,j,k) ! rho X v
          
          leftco(mcsp,i,j,k)= leftpr(ncsp,i,j,k)
          leftco(mvel,i,j,k)= leftpr(nve2,i,j,k)
@@ -788,7 +788,7 @@
      &                     +rigtpr(nve2,i,j,k)**2  &
      &                     +rigtpr(nve3,i,j,k)**2)
          
-         rigtco(muet+1:muet+ncomp,i,j,k)=rigtpr(muet+1:muet+ncomp,i,j,k)*rigtpr(nden,i,j,k)
+         rigtco(muet+1:muet+ncomp,i,j,k)=rigtpr(nene+1:nene+ncomp,i,j,k)*rigtpr(nden,i,j,k)
 
          rigtco(mfdn,i,j,k)=rigtpr(nden,i,j,k)                   *rigtpr(nve2,i,j,k)
          rigtco(mfvw,i,j,k)=rigtpr(nden,i,j,k)*rigtpr(nve1,i,j,k)*rigtpr(nve2,i,j,k)
@@ -802,7 +802,7 @@
      &                     +rigtpr(nve3,i,j,k)**2) &
      &                     +rigtpr(npre,i,j,k)     &
      &                                       )*rigtpr(nve2,i,j,k)
-         rigtco(mfet+1:mfet+ncomp,i,j,k)=rigtpr(muet+1:muet+ncomp,i,j,k)*rigtpr(nve2,i,j,k) ! rho X v
+         rigtco(mfet+1:mfet+ncomp,i,j,k)=rigtco(muet+1:muet+ncomp,i,j,k)*rigtpr(nve2,i,j,k) ! rho X v
          
 
          rigtco(mcsp,i,j,k)= rigtpr(ncsp,i,j,k)
