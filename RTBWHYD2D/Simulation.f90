@@ -46,6 +46,9 @@
       real(8),dimension(in,jn,kn)::p,ei,v1,v2,v3,cs
       real(8),dimension(in,jn,kn)::gp,gp1a,gp2a
 
+      integer,parameter::ncomp=3 ! composition
+      real(8),dimension(in,jn,kn):: DXcomp(ncomp,in,jn,kn)
+      real(8),dimension(in,jn,kn)::  Xcomp(ncomp,in,jn,kn)
 
       end module commons
      
@@ -55,19 +58,19 @@
       real(8),parameter::gam=4.0d0/3.0d0 !! adiabatic index
 ! isothermal
 !      real(8)::csiso  !! isothemal sound speed
-end module eosmod
+      end module eosmod
 
       module fluxmod
-      use commons, only : in,jn,kn
+      use commons, only : in,jn,kn,ncomp
       implicit none
-      integer,parameter::nden=1,nve1=2,nve2=3,nve3=4,nene=5,npre=6,ncsp=7
-      integer,parameter::nhyd=7
+      integer,parameter::nden=1,nve1=2,nve2=3,nve3=4,nene=5,npre=5+ncomp+1,ncsp=5+ncomp+2
+      integer,parameter::nhyd=5+ncomp+2
       real(8),dimension(nhyd,in,jn,kn):: svc
 
-      integer,parameter::mudn=1,muvu=2,muvv=3,muvw=4,muet=5  &
-     &                  ,mfdn=6,mfvu=7,mfvv=8,mfvw=9,mfet=10 &
-     &                  ,mcsp=11,mvel=12,mpre=13
-      integer,parameter:: mflx=5,madd=3
+      integer,parameter:: mflx=5+ncomp,madd=3
+      integer,parameter::mudn=     1,muvu=     2,muvv=     3,muvw=     4,muet=    5  &
+     &                  ,mfdn=mflx+1,mfvu=mflx+2,mfvv=mflx+3,mfvw=mflx+4,mfet=mflx+5 &
+     &                  ,mcsp=2*mflx+1,mvel=2*mflx+2,mpre=2*mflx+3
 
       integer,parameter:: mden=1,mrv1=2,mrv2=3,mrv3=4,meto=5 &
      &                          ,mrvu=muvu,mrvv=muvv,mrvw=muvw
@@ -194,11 +197,13 @@ end module eosmod
          if(x1b(i) < Rexp)then
              d(i,j,k) = rho1
              p(i,j,k) = pre1
-            v1(i,j,k) = vel1*(x1b(i)/Rexp)
+             v1(i,j,k) = vel1*(x1b(i)/Rexp)
+             Xcomp(1:ncomp,i,j,k) = 1.0d0
          else
              d(i,j,k) = rho2
              p(i,j,k) = pre2
             v1(i,j,k) = vel2
+             Xcomp(1:ncomp,i,j,k) = 0.0d0
          endif
       enddo
       enddo
@@ -252,6 +257,8 @@ end module eosmod
           v2(is-i,j,k) =  v2(is+i-1,j,k)
           v3(is-i,j,k) =  v3(is+i-1,j,k)
           gp(is-i,j,k) =  gp(is+i-1,j,k)
+          
+          Xcomp(1:ncomp,is-i,j,k) = Xcomp(1:ncomp,is+i-1,j,k)
       enddo
       enddo
       enddo
@@ -265,6 +272,8 @@ end module eosmod
           v2(ie+i,j,k) =  v2(ie-i+1,j,k)
           v3(ie+i,j,k) =  v3(ie-i+1,j,k)
           gp(ie+i,j,k) =  gp(ie-i+1,j,k)
+          
+          Xcomp(1:ncomp,ie+i,j,k) = Xcomp(1:ncomp,ie-i+1,j,k)
       enddo
       enddo
       enddo
@@ -279,6 +288,8 @@ end module eosmod
           v2(i,js-j,k) =  -v2(i,js+j-1,k)
           v3(i,js-j,k) =   v3(i,js+j-1,k)
           gp(i,js-j,k) =   gp(i,js+j-1,k)
+          
+          Xcomp(1:ncomp,i,js-j,k) = Xcomp(1:ncomp,i,js+j,k)
       enddo
       enddo
       enddo
@@ -292,6 +303,8 @@ end module eosmod
           v2(i,je+j,k) =  -v2(i,je-j+1,k)
           v3(i,je+j,k) =   v3(i,je-j+1,k)
           gp(i,je+j,k) =   gp(i,je-j+1,k)
+          
+          Xcomp(1:ncomp,i,je+j,k) = Xcomp(1:ncomp,i,je-j+1,k)
       enddo
       enddo
       enddo
@@ -316,6 +329,7 @@ end module eosmod
           mv1(i,j,k) =d(i,j,k)*v1(i,j,k)
           mv2(i,j,k) =d(i,j,k)*v2(i,j,k)
           mv3(i,j,k) =d(i,j,k)*v3(i,j,k)
+          DXcomp(1:ncomp,i,j,k) =d(i,j,k)*Xcomp(1:ncomp,i,j,k)
       enddo
       enddo
       enddo
@@ -349,6 +363,8 @@ end module eosmod
 ! isotermal
 !           p(i,j,k) =  d(i,j,k)*csiso**2
 !          cs(i,j,k) =  csiso
+          
+          Xcomp(1:ncomp,i,j,k) = DXcomp(1:ncomp,i,j,k)/d(i,j,k)
       enddo
       enddo
       enddo
@@ -406,6 +422,8 @@ end module eosmod
          svc(nve3,i,j,k) = v3(i,j,k)
 ! adiabatic
          svc(nene,i,j,k) = ei(i,j,k)/d(i,j,k)
+         svc(nene+1:nene+ncomp,i,j,k) = Xcomp(1:ncomp,i,j,k)
+         
          svc(npre,i,j,k) = ei(i,j,k)*(gam-1.0d0)
          svc(ncsp,i,j,k) = sqrt(gam*(gam-1.0d0)*ei(i,j,k)/d(i,j,k))
 ! isotermal
@@ -568,6 +586,8 @@ end module eosmod
      &                     +leftpr(nve1,i,j,k)**2   &
      &                     +leftpr(nve2,i,j,k)**2   &
      &                     +leftpr(nve3,i,j,k)**2)
+         
+         leftco(muet+1:muet+ncomp,i,j,k)=leftpr(muet+1:muet+ncomp,i,j,k)*leftpr(nden,i,j,k) ! rho X
 
          leftco(mfdn,i,j,k)=leftpr(nden,i,j,k)                   *leftpr(nve1,i,j,k)
          leftco(mfvu,i,j,k)=leftpr(nden,i,j,k)*leftpr(nve1,i,j,k)*leftpr(nve1,i,j,k) &
@@ -580,7 +600,9 @@ end module eosmod
      &                     +leftpr(nve2,i,j,k)**2  &
      &                     +leftpr(nve3,i,j,k)**2) &
      &                     +leftpr(npre,i,j,k)     &
-     &                       )                                  *leftpr(nve1,i,j,k) 
+     &                       )                                  *leftpr(nve1,i,j,k)
+         
+         leftco(mfet+1:mfet+ncomp,i,j,k)=leftpr(muet+1:muet+ncomp,i,j,k)*leftpr(nve1,i,j,k)
 
          leftco(mcsp,i,j,k)= leftpr(ncsp,i,j,k)
          leftco(mvel,i,j,k)= leftpr(nve1,i,j,k)
@@ -597,6 +619,8 @@ end module eosmod
      &                     +rigtpr(nve2,i,j,k)**2 &
      &                     +rigtpr(nve3,i,j,k)**2)
 
+         rigtco(muet+1:muet+ncomp,i,j,k) = rigtpr(muet+1:muet+ncomp,i,j,k) * rigtpr(nden,i,j,k) ! rho X
+
          rigtco(mfdn,i,j,k)=rigtpr(nden,i,j,k)                   *rigtpr(nve1,i,j,k)
          rigtco(mfvu,i,j,k)=rigtpr(nden,i,j,k)*rigtpr(nve1,i,j,k)*rigtpr(nve1,i,j,k) &
      &                     +rigtpr(npre,i,j,k)
@@ -609,6 +633,8 @@ end module eosmod
      &                     +rigtpr(nve3,i,j,k)**2) &
      &                     +rigtpr(npre,i,j,k)     &
      &                      )                                    *rigtpr(nve1,i,j,k)
+         
+         rigtco(mfet+1:mfet+ncomp,i,j,k)=rigtpr(muet+1:muet+ncomp,i,j,k)*rigtpr(nve1,i,j,k)
 
          rigtco(mcsp,i,j,k)= rigtpr(ncsp,i,j,k)
          rigtco(mvel,i,j,k)= rigtpr(nve1,i,j,k)
@@ -630,6 +656,7 @@ end module eosmod
          nflux1(mrv2,i,j,k)=nflux(mrvv)
          nflux1(mrv3,i,j,k)=nflux(mrvw)
          nflux1(meto,i,j,k)=nflux(meto)
+         nflux1(meto+1:mflx,i,j,k)=nflux(meto+1:mflx)
       enddo
       enddo
 !$end omp parallel
@@ -730,6 +757,8 @@ end module eosmod
      &                     +leftpr(nve2,i,j,k)**2 &
      &                     +leftpr(nve3,i,j,k)**2)
 
+         leftco(muet+1:muet+ncomp,i,j,k)=leftpr(muet+1:muet+ncomp,i,j,k)*leftpr(nden,i,j,k)
+         
          leftco(mfdn,i,j,k)=leftpr(nden,i,j,k)                   *leftpr(nve2,i,j,k) ! rho v
          leftco(mfvw,i,j,k)=leftpr(nden,i,j,k)*leftpr(nve1,i,j,k)*leftpr(nve2,i,j,k)
          leftco(mfvu,i,j,k)=leftpr(nden,i,j,k)*leftpr(nve2,i,j,k)*leftpr(nve2,i,j,k) &
@@ -742,7 +771,8 @@ end module eosmod
      &                     +leftpr(nve3,i,j,k)**2) &
      &                     +leftpr(npre,i,j,k)     &
      &                                       )*leftpr(nve2,i,j,k)
-
+         leftco(mfet+1:mfet+ncomp,i,j,k)=leftpr(muet+1:muet+ncomp,i,j,k)*leftpr(nve2,i,j,k) ! rho X v
+         
          leftco(mcsp,i,j,k)= leftpr(ncsp,i,j,k)
          leftco(mvel,i,j,k)= leftpr(nve2,i,j,k)
          leftco(mpre,i,j,k)= leftpr(npre,i,j,k)
@@ -757,6 +787,8 @@ end module eosmod
      &                     +rigtpr(nve1,i,j,k)**2  &
      &                     +rigtpr(nve2,i,j,k)**2  &
      &                     +rigtpr(nve3,i,j,k)**2)
+         
+         rigtco(muet+1:muet+ncomp,i,j,k)=rigtpr(muet+1:muet+ncomp,i,j,k)*rigtpr(nden,i,j,k)
 
          rigtco(mfdn,i,j,k)=rigtpr(nden,i,j,k)                   *rigtpr(nve2,i,j,k)
          rigtco(mfvw,i,j,k)=rigtpr(nden,i,j,k)*rigtpr(nve1,i,j,k)*rigtpr(nve2,i,j,k)
@@ -770,6 +802,8 @@ end module eosmod
      &                     +rigtpr(nve3,i,j,k)**2) &
      &                     +rigtpr(npre,i,j,k)     &
      &                                       )*rigtpr(nve2,i,j,k)
+         rigtco(mfet+1:mfet+ncomp,i,j,k)=rigtpr(muet+1:muet+ncomp,i,j,k)*rigtpr(nve2,i,j,k) ! rho X v
+         
 
          rigtco(mcsp,i,j,k)= rigtpr(ncsp,i,j,k)
          rigtco(mvel,i,j,k)= rigtpr(nve2,i,j,k)
@@ -791,6 +825,7 @@ end module eosmod
          nflux2(mrv2,i,j,k)=nflux(mrvu) ! mrv2=3, mrvu=2
          nflux2(mrv3,i,j,k)=nflux(mrvv)
          nflux2(meto,i,j,k)=nflux(meto)
+         nflux2(meto+1:mflx,i,j,k)=nflux(meto+1:mflx)
       enddo
       enddo
 !$end omp parallel
@@ -1157,6 +1192,16 @@ end module eosmod
      &   + nflux2(meto,i,j  ,k)*as2(j  )           &
      &  )*dv2i(j) *(0.5d0*(as1(i+1)-as1(i))*dv1i(i)) &
      &      )
+
+         DXcomp(1:ncomp,i,j,k) = DXcomp(1:ncomp,i,j,k)                       &
+     & +dt*(                                       &
+     & +(- nflux1(meto+1:mflx,i+1,j,k)*as1(i+1)           &
+     &   + nflux1(meto+1:mflx,i  ,j,k)*as1(i  ))*dv1i(i)  &
+     & +(- nflux2(meto+1:mflx,i,j+1,k)*as2(j+1)           &
+     &   + nflux2(meto+1:mflx,i,j  ,k)*as2(j  )           &
+     &  )*dv2i(j)*0.5d0*(as1(i+1)-as1(i))* dv1i(i) &
+     &      )
+          
       enddo
       enddo
       enddo
@@ -1168,7 +1213,7 @@ end module eosmod
       subroutine Output
       use commons
       implicit none
-      integer::i,j,k
+      integer::i,j,k,n
       character(20),parameter::dirname="bindata/"
       character(40)::filename
       real(8),save::tout
@@ -1178,7 +1223,7 @@ end module eosmod
       integer,parameter:: unitout=17
       integer,parameter:: unitbin=13
       integer,parameter:: gs=1
-      integer,parameter:: nvar=6
+      integer,parameter:: nvar=6+ncomp
       real(8)::x1out(is-gs:ie+gs,3)
       real(8)::x2out(js-gs:je+gs,3)
       real(8)::hydout(is-gs:ie+gs,js-gs:je+gs,ks,nvar)
@@ -1215,7 +1260,10 @@ end module eosmod
       hydout(is-gs:ie+gs,js-gs:je+gs,ks,3) = v2(is-gs:ie+gs,js-gs:je+gs,ks)
       hydout(is-gs:ie+gs,js-gs:je+gs,ks,4) = v3(is-gs:ie+gs,js-gs:je+gs,ks)
       hydout(is-gs:ie+gs,js-gs:je+gs,ks,5) =  p(is-gs:ie+gs,js-gs:je+gs,ks)
-      hydout(is-gs:ie+gs,js-gs:je+gs,ks,6) = ei(is-gs:ie+gs,js-gs:je+gs,ks)
+      hydout(is-gs:ie+gs,js-gs:je+gs,ks,6) = ei(is-gs:ie+gs,js-gs:je+gs,ks) ! 6
+      do n = 1,ncomp
+         hydout(is-gs:ie+gs,js-gs:je+gs,ks,6+n) = Xcomp(n,is-gs:ie+gs,js-gs:je+gs,ks)
+      enddo
 !      hydout(is-gs:ie+gs,js-gs:je+gs,ks,6) = gp(is-gs:ie+gs,js-gs:je+gs,ks)
 
       write(filename,'(a3,i5.5,a4)')"bin",nout,".dat"
