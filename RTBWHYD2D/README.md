@@ -17,9 +17,9 @@ To run the code, you need to compile `Simulation.f90`.
     
     cd RayleighTaylorInstability/RTBWHYD2D/
     module load intel/2022
-    make Simulation.x
+    make build
     
-Then `Simulation.x`is made in this directory.
+Then `Simulation.x`is made in this directory. You can know the command by `make help`.
 
 ### run
 Let's run the code.
