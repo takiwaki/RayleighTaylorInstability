@@ -1,3 +1,4 @@
+
 ##########################################
 # Makefile for Turbulence Studies
 ##########################################
@@ -77,13 +78,16 @@ timefile=t-E.png
 # Proceadures
 ##########################################
 
-all: ${exe} ${movies} ${timefile}
+all: build movie timeevolution
 
 .PHONY: all clean allclean
 
 ##########################################
 # Time evolution
 ##########################################
+.PHONY: timeevolution
+timeevolution: ${timefile} ## time evolution 
+
 ${timefile}: t-E.plt t-prof.dat
 	gnuplot t-E.plt
 
@@ -93,8 +97,8 @@ t-prof.dat: MakeTimeseq.sh ${TOT}
 #################
 # ffmpeg
 #################
-
-movie: ${movies}
+.PHONY: movie
+movie: ${movies} ## Make movie
 
 ${denmovie}: MakeMovie.sh ${DENPNG}
 	./MakeMovie.sh den
@@ -145,15 +149,20 @@ ${TOT}: ${ana} ${BIN} ${countfile}
 # simulation
 #################
 
+build: ${ana} ## Compile the analyis code
+
 ${ana}: Analysis.f90
 	${fc} ${fopt} $< -o ${ana}
-
 
 #################
 # clean up
 #################
-clean:
+clean: ## Delete intermediate files to compile
 	rm -f  ${ana} *.o *.mod *~
 
-allclean:
+allclean: ## Delete data
 	rm -fr ${dirm} ${dirf}  ${dira} ${countfile}
+
+.PHONY: help
+help: ## Display this help screen
+	@grep -E '^[a-zA-Z_-]+:.*?## .*$$' $(MAKEFILE_LIST) | awk 'BEGIN {FS = ":.*?## "}; {printf "\033[36m%-20s\033[0m %s\n", $$1, $$2}'

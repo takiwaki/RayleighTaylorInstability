@@ -25,7 +25,7 @@ input= "t-prof.dat"
 outputfile= "t-E.png"
 if(pngflag==1)set output outputfile
 
-set xlabel "Time [year]"
+set xlabel "Time [day]"
 set log x
 
 set ylabel "Explosion energy [erg]"

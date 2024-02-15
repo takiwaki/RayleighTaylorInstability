@@ -1,13 +1,24 @@
 
+
+
 ##########################################
 # parameters
 ##########################################
 
-# Range of the plot [pc]
-srange=1e10
+# Range of the plot [Rs]
+srange=0.5
+
+####################
+# Output control
+####################
 
 # Format of the output
 pngflag=1
+
+# OUTPUT PNG
+if (pngflag==1) set term push
+if (pngflag==1) set term pngcairo enhanced font "Helvetica, 12" size 550,600
+
 
 ##########################################
 # initialize
@@ -44,26 +55,16 @@ if(flag ne "0") print ifnames." not found"; quit
 # Extract Time
 print  ifnames." found"
 
-command = sprintf(" head -n 1 %s | sed 's/#//' ",ifnames)
+command = sprintf(" head -n 1 %s | sed 's/#  time_s= *//' ",ifnames)
 time   = system(command)
-print "time=".time
+timeunit=" s"
+timetxt = time.timeunit
+print "time=".timetxt
 
 # Showing Time
-set label time at screen 0.65, screen 0.85
+set label timetxt at screen 0.65, screen 0.85
 
 
-####################
-# Output control
-####################
-
-# OUTPUT PNG
-if (pngflag==1) set term push
-if (pngflag==1) set term pngcairo  enhanced font "Helvetica, 12" size 550,500
-
-
-ofname = sprintf("figures/dnt%05d.png",ifnum)
-print ofname
-if (pngflag==1) set output ofname
 
 ####################
 # Annotation
@@ -78,17 +79,27 @@ set size ratio -1
 set view map
 unset key
 
-set size 1.0
+set size 0.9, 0.9
 unset origin
 
 
 # vertical and horizontal axis
 set origin 0.0,0.0
-set xlabel "X [cm]" offset 0,0
+set xlabel "X [R_s]" offset 0,1.0
+set xtics offset 0,0.7
 #set xtics 50
-set ylabel "Z [cm]" offset 0,0
+
+set ylabel "Z [R_s]" offset 1.0,0
+set ytics offset 0,0.7
 #set ytics 50
 vr=srange/10
+
+####################
+# Plot
+####################
+ofname = sprintf("figures/dnt%05d.png",ifnum)
+print ofname
+if (pngflag==1) set output ofname
 
 # Position of color bar
 set colorbox horizontal user origin 0.235, 0.87 size 0.5, 0.04
@@ -100,17 +111,30 @@ set cbtics offset 0,3.2
 #cmax=5
 #set cbrange [cmin:cmax]
 
-####################
-# Plot
-####################
-
-
 # Main plot
 splot [-srange:srange][-srange:srange] \
   ifnames u ( $1*sin($2)):($1*cos($2)):($1<srange?($3):NaN) w pm3d \
 , ifnames u (-$1*sin($2)):($1*cos($2)):($1<srange?($3):NaN) w pm3d \
 
 unset label
+
+
+####################
+# Plot
+####################
+ofname = sprintf("figures/xct%05d.png",ifnum)
+print ofname
+if (pngflag==1) set output ofname
+
+set palette define (1.0 "blue", 2.0 "green", 3.0 "red")
+set cbrange [1:3]
+
+splot [-srange:srange][-srange:srange] \
+  ifnames u ( $1*sin($2)):($1*cos($2)):($1<srange?(3*$6+2*$7+$8):NaN) w pm3d \
+, ifnames u (-$1*sin($2)):($1*cos($2)):($1<srange?(3*$6+2*$7+$8):NaN) w pm3d \
+
+unset label
+
 
 ##########################################
 # finalize

@@ -19,7 +19,7 @@
       real(8)::time,dt
       real(8),parameter:: Coul=0.25d0
       data time / 0.0d0 /
-      real(8),parameter:: timemax=1.0d2 ! 1000 s
+      real(8),parameter:: timemax=3.0d2 ! [s]
       real(8),parameter:: dtout=timemax/500
 
       integer,parameter::izones=200
@@ -36,7 +36,7 @@
      &                  ,ke=1
 
 
-      real(8),parameter:: x1min=1.0d8,x1max=1.0d10 ! cm
+      real(8),parameter:: x1min=1.0d8,x1max=5.0d10,dx1min=1.0d7 ! cm
       real(8),dimension(in)::x1a,x1b,dvl1a
 
       real(8),parameter:: x2min=0.0d0,x2max=acos(-1.0)
@@ -94,10 +94,10 @@
       call ConsvVariable
       write(6,*) "entering main loop"
 ! main loop
-      write(6,*)"step","time [day]","dt [day]"
+      write(6,*)"step","time [s]","dt [s]"
       mloop: do nhy=1,nhymax
          call TimestepControl
-         if(mod(nhy,nhyspan) .eq. 0 ) write(6,*)nhy,time/day,dt/day
+         if(mod(nhy,nhyspan) .eq. 0 ) write(6,*)nhy,time,dt
          call BoundaryCondition
          call CheckShock
          call StateVector
@@ -118,17 +118,63 @@
       implicit none
       real(8)::dx,dy
       integer::i,j,k
-      write(6,*) "r:",x1min,x1max
-      dx=(x1max-x1min)/izones
-      do i=1,in
-         x1a(i) = dx*(i-(mgn+1))+x1min
-      enddo
+      logical,parameter:: logMesh=.true.
+      
+      integer:: iter,nbl
+      real(8):: x1r,fn,dfndx1r,deltx1r,errx1r
+      real(8),parameter:: eps = 1.0d-6
+      
+      if(.not. logMesh) then
+         write(6,*) "r:",x1min,x1max
+         dx=(x1max-x1min)/izones
+         do i=1,in
+            x1a(i) = dx*(i-(mgn+1))+x1min
+         enddo
+      else
+         write(6,*) "r:",x1min,x1max,dx1min
+         x1r =1.01d0
+         x1itr: do iter=1,30
+            nbl = izones
+            fn = (x1max - x1min) - dx1min*(x1r**nbl - 1.0)/(x1r - 1.0)
+            dfndx1r =  -nbl*dx1min*x1r**(nbl - 1)/(x1r - 1.0) &
+       &                  + dx1min*(x1r**nbl - 1.0)/(x1r - 1.0)**2
+            deltx1r  = -fn/dfndx1r
+            errx1r  = abs(deltx1r/x1r)
+            x1r = x1r + deltx1r
+            if (errx1r .lt. eps) exit x1itr
+         enddo x1itr
+         if(errx1r .gt. eps)then
+            print *, "coordinate error",errx1r
+            stop
+         endif
+         
+         dx = dx1min
+         x1a(is) = x1min
+
+         do i=is-1,is-mgn
+            x1a(i) = x1a(i+1) - dx
+         enddo
+         
+         do i=is+1,ie+1
+            x1a(i) = x1a(i-1) + dx
+            dx = dx*x1r
+         enddo
+         
+         dx = x1a(ie+1)-x1a(ie)
+         do i=ie+1,ie+mgn+1
+            x1a(i) = x1a(i-1) + dx
+         enddo
+
+      endif
+      
       do i=1,in-1
          x1b(i) = 0.5d0*(x1a(i+1)+x1a(i))
       enddo
       do i=is,ie
          dvl1a(i) = (x1a(i+1)**3-x1a(i)**3)/3.0d0
       enddo
+      
+      
 
       write(6,*) "theta:",x2min,x2max
       dy=(x2max-x2min)/jzones
@@ -155,12 +201,13 @@
       implicit none
       integer::i,j,k
       real(8),parameter:: neu = 3.0d0
-      real(8):: rho1,rho2,rho3
       real(8):: ein0
+      real(8):: Rexp,Rcor
+      real(8):: M1,M2
+      real(8):: rho1,rho2,rho3
       real(8):: pre1,pre2,pre3
       real(8):: vel1,vel2,vel3
-      real(8):: Rexp,Rsll
-      real(8):: vol
+      real(8):: vol1,vol2,vol3
       real(8):: pi
       real(8):: frac,eexp
      
@@ -169,42 +216,48 @@
       real(8),parameter :: rrv =1.0d-1
       
       pi =acos(-1.0d0)
+    
+! Explosion occurs in the center
       Rexp = 2000e5 ! 2000km
-      Rsll = 4000e5 ! 4000km
-      
-! blast wave
+      M1   = 1.0d0
       frac = 0.8d0
-      vol  = (4.0*pi/3.0d0*Rexp**3-4.0*pi/3.0d0*x1min**3)
-      rho1 = (1.0d0*Msolar)/vol
+      vol1  = (4.0*pi/3.0d0*Rexp**3-4.0*pi/3.0d0*x1min**3)
+      rho1 = (M1*Msolar)/vol1
       eexp = frac*(1.0d51)
-      pre1 = eexp/(vol)*(gam-1.0d0)  
-      vel1 = sqrt((1.0d0-frac)*eexp/vol/rho1)
+      pre1 = eexp/(vol1)*(gam-1.0d0)  
+      vel1 = sqrt((1.0d0-frac)*eexp/vol1/rho1)
 
-      rho2 = 1.0d-2*rho1 ! [g/cm^3]
-      pre2 = 1.0d-2*pre1 !
+! Radius of core
+      Rcor = 10.0d0*Rexp
+      M2   = 3.0d0
+      vol2 =  (4.0*pi/3.0d0*Rcor**3-4.0*pi/3.0d0*Rexp**3)
+      rho2 = (M2*Msolar)/vol2 ! [g/cm^3]
+      pre2 = 1.0d17*rho2 !
       vel2 = 0.0d0
       
-      rho2 = 1.0d-2*rho2 ! [g/cm^3]
-      pre2 = 1.0d-2*pre2 !
-      vel2 = 0.0d0
+      rho3 = 1.0d-2*rho2 ! [g/cm^3]
+      pre3 = 1.0d15*rho3 !
+      vel3 = 0.0d0
 
       write(6,*) "Exploding Regin [cm]",Rexp
       write(6,*) "Eex= ",frac   ,"[10^51 erg]"
+      write(6,*) "M1 = ",M1     ,"[M_s]"
       write(6,*) "rho= ",rho1   ,"[g/cm^3]"
       write(6,*) "pre= ",pre1   ,"[erg/cm^3]"
       write(6,*) "vel= ",vel1   ,"[cm/s]"
 
-      write(6,*) "Core Radius [cm]",Rsll
+      write(6,*) "Core Radius [cm]",Rcor
+      write(6,*) "M2 = ",M2     ,"[M_s]"
       write(6,*) "rho= ",rho2   ,"[g/cm^3]"
       write(6,*) "pre= ",pre2   ,"[erg/cm^3]"
 
+      write(6,*) "Outer boundary [cm]",x1max
       write(6,*) "Envelope"
       write(6,*) "rho= ",rho3   ,"[g/cm^3]"
       write(6,*) "pre= ",pre3   ,"[erg/cm^3]"
-
       
       d(:,:,:) = rho3
-      Xcomp(1:ncomp,:,:,:) = 0.0d0
+      Xcomp(1:ncomp,:,:,:) = 1.0d-10
       
       do k=ks,ke
       do j=js,je
@@ -214,7 +267,7 @@
              p(i,j,k) = pre1
              v1(i,j,k) = vel1*(x1b(i)/Rexp)
              Xcomp(1,i,j,k) = 1.0d0
-         else if(x1b(i) < Rsll)then
+         else if(x1b(i) < Rcor)then
              d(i,j,k) = rho2
              p(i,j,k) = pre2
              v1(i,j,k) = vel2
@@ -266,7 +319,8 @@
       subroutine BoundaryCondition
       use commons
       implicit none
-      integer::i,j,k
+      integer:: i,j,k
+      integer:: itmp
 
 !reflection
       do k=ks,ke
@@ -287,14 +341,16 @@
       do k=ks,ke
       do j=js,je
       do i=1,mgn
-           d(ie+i,j,k) =   d(ie-i+1,j,k)
-          ei(ie+i,j,k) =  ei(ie-i+1,j,k)
-          v1(ie+i,j,k) =  v1(ie-i+1,j,k)
-          v2(ie+i,j,k) =  v2(ie-i+1,j,k)
-          v3(ie+i,j,k) =  v3(ie-i+1,j,k)
-          gp(ie+i,j,k) =  gp(ie-i+1,j,k)
+!         itmp = ie-i+1 ! reflection
+         itmp = ie ! outflow
+           d(ie+i,j,k) =   d(itmp,j,k)
+          ei(ie+i,j,k) =  ei(itmp,j,k)
+          v1(ie+i,j,k) =  v1(itmp,j,k)
+          v2(ie+i,j,k) =  v2(itmp,j,k)
+          v3(ie+i,j,k) =  v3(itmp,j,k)
+          gp(ie+i,j,k) =  gp(itmp,j,k)
           
-          Xcomp(1:ncomp,ie+i,j,k) = Xcomp(1:ncomp,ie-i+1,j,k)
+          Xcomp(1:ncomp,ie+i,j,k) = Xcomp(1:ncomp,itmp,j,k)
       enddo
       enddo
       enddo
@@ -310,7 +366,7 @@
           v3(i,js-j,k) =   v3(i,js+j-1,k)
           gp(i,js-j,k) =   gp(i,js+j-1,k)
           
-          Xcomp(1:ncomp,i,js-j,k) = Xcomp(1:ncomp,i,js+j,k)
+          Xcomp(1:ncomp,i,js-j,k) = Xcomp(1:ncomp,i,js+j-1,k)
       enddo
       enddo
       enddo
@@ -1013,7 +1069,7 @@
         frxl = leftst(mfvu)
         fryl = leftst(mfvv)
         frzl = leftst(mfvw)
-        fscl(1:ncomp) = leftst(mst:med)
+        fscl(1:ncomp) = leftst(mflx+mst:mflx+med)
 
 ! Right value
 ! Left value
@@ -1022,7 +1078,7 @@
         frxr = rigtst(mfvu)
         fryr = rigtst(mfvv) 
         frzr = rigtst(mfvw)
-        fscr(1:ncomp) = rigtst(mst:med)
+        fscr(1:ncomp) = rigtst(mflx+mst:mflx+med)
 
 !----- Step 4. ----------------------------------------------------------|
 ! compute middle and alfven wave
@@ -1287,7 +1343,7 @@
      &  )*dv2i(j)*0.5d0*(as1(i+1)-as1(i))* dv1i(i) &
      &      )
          do n=1,ncomp
-            DXcomp(n,i,j,k) = max(0.0d0,DXcomp(n,i,j,k))
+            DXcomp(n,i,j,k) = max(1.0d-10,DXcomp(n,i,j,k))
          enddo
       enddo
       enddo
