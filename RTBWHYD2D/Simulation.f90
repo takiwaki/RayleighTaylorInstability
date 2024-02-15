@@ -4,8 +4,10 @@
       real(8),parameter::    pc  = 3.085677581d18   ! parsec in [cm]
       real(8),parameter::    mu  = 1.660539066d-24  ! g
       real(8),parameter:: Msolar = 1.989e33         ! g
+      real(8),parameter:: Rsolar = 6.65700d10       ! cm
       real(8),parameter::   kbol = 1.380649d-23     ! J/K
       real(8),parameter::   year = 365.0d0*24*60*60 ! sec
+      real(8),parameter::    day = 24*60*60 ! sec
 
       end module unitsmod
 
@@ -49,7 +51,7 @@
       integer,parameter::ncomp=3 ! composition
       real(8),dimension(ncomp,in,jn,kn):: DXcomp
       real(8),dimension(ncomp,in,jn,kn)::  Xcomp
-
+      
       end module commons
      
       module eosmod
@@ -66,11 +68,13 @@
       integer,parameter::nden=1,nve1=2,nve2=3,nve3=4,nene=5,npre=5+ncomp+1,ncsp=5+ncomp+2
       integer,parameter::nhyd=5+ncomp+2
       real(8),dimension(nhyd,in,jn,kn):: svc
+      real(8),dimension(in,jn,kn):: nshock
 
       integer,parameter:: mflx=5+ncomp,madd=3
       integer,parameter::mudn=     1,muvu=     2,muvv=     3,muvw=     4,muet=    5  &
      &                  ,mfdn=mflx+1,mfvu=mflx+2,mfvv=mflx+3,mfvw=mflx+4,mfet=mflx+5 &
-     &                  ,mcsp=2*mflx+1,mvel=2*mflx+2,mpre=2*mflx+3
+     &                  ,mcsp=2*mflx+1,mvel=2*mflx+2,mpre=2*mflx+3 &
+     &                  ,mst=5+1,med=5+ncomp
 
       integer,parameter:: mden=1,mrv1=2,mrv2=3,mrv3=4,meto=5 &
      &                          ,mrvu=muvu,mrvv=muvv,mrvw=muvw
@@ -90,12 +94,12 @@
       call ConsvVariable
       write(6,*) "entering main loop"
 ! main loop
-                                  write(6,*)"step","time [yr]","dt [yr]"
+      write(6,*)"step","time [day]","dt [day]"
       mloop: do nhy=1,nhymax
          call TimestepControl
-         if(mod(nhy,nhyspan) .eq. 0 ) write(6,*)nhy,time/year,dt/year
-!         write(6,*)nhy,time/year,dt/year
+         if(mod(nhy,nhyspan) .eq. 0 ) write(6,*)nhy,time/day,dt/day
          call BoundaryCondition
+         call CheckShock
          call StateVector
          call NumericalFlux1
          call NumericalFlux2
@@ -190,7 +194,8 @@
       write(6,*) "pre= ",pre2   ,"[erg/cm^3]"
     
       d(:,:,:) = rho2
-  
+      Xcomp(1:ncomp,:,:,:) = 0.0d0
+      
       do k=ks,ke
       do j=js,je
       do i=is,ie
@@ -198,11 +203,16 @@
              d(i,j,k) = rho1
              p(i,j,k) = pre1
              v1(i,j,k) = vel1*(x1b(i)/Rexp)
-             Xcomp(1:ncomp,i,j,k) = 1.0d0
          else
              d(i,j,k) = rho2
              p(i,j,k) = pre2
-            v1(i,j,k) = vel2
+             v1(i,j,k) = vel2
+             
+          endif
+
+         if(x1b(i) < 0.9d0*Rexp)then
+            Xcomp(1:ncomp,i,j,k) = 1.0d0
+         else
              Xcomp(1:ncomp,i,j,k) = 0.0d0
          endif
       enddo
@@ -329,7 +339,7 @@
           mv1(i,j,k) =d(i,j,k)*v1(i,j,k)
           mv2(i,j,k) =d(i,j,k)*v2(i,j,k)
           mv3(i,j,k) =d(i,j,k)*v3(i,j,k)
-          DXcomp(1:ncomp,i,j,k) =d(i,j,k)*Xcomp(1:ncomp,i,j,k)
+          DXcomp(1:ncomp,i,j,k) = d(i,j,k)*Xcomp(1:ncomp,i,j,k)
       enddo
       enddo
       enddo
@@ -414,7 +424,7 @@
 
 !$omp parallel do collapse(3)
       do k=ks,ke
-      do j=js,je
+      do j=1,jn-1
       do i=1,in-1
          svc(nden,i,j,k) =  d(i,j,k)
          svc(nve1,i,j,k) = v1(i,j,k)
@@ -527,7 +537,7 @@
       real(8),dimension(nhyd,in,jn,kn):: leftpr,rigtpr
       real(8),dimension(2*mflx+madd,in,jn,kn):: leftco,rigtco
       real(8),dimension(2*mflx+madd):: leftst,rigtst
-      real(8),dimension(mflx):: nflux
+      real(8),dimension(mflx):: nflux,nfluxe,nfluxc
       real(8),dimension(in),save:: x1c,ctl,ctr
       real(8),dimension(in),save:: bck,frd,cf,cb
       real(8):: xii,cflo,cblo
@@ -649,8 +659,13 @@
       do i=is,ie+1
          leftst(:)=leftco(:,i,j,k)
          rigtst(:)=rigtco(:,i,j,k)
-         call HLLE(leftst,rigtst,nflux)
-!         call HLLC(leftst,rigtst,nflux)
+         call HLLE(leftst,rigtst,nfluxe)
+         call HLLC(leftst,rigtst,nfluxc)
+         
+         nflux(:) =  &
+     &        max(nshock(i-1,j,k),nshock(i,j,k)) *nfluxe(:) &
+     &+(1.0d0-max(nshock(i-1,j,k),nshock(i,j,k)))*nfluxc(:)
+         
          nflux1(mden,i,j,k)=nflux(mden)
          nflux1(mrv1,i,j,k)=nflux(mrvu)
          nflux1(mrv2,i,j,k)=nflux(mrvv)
@@ -673,7 +688,7 @@
       real(8),dimension(nhyd,in,jn,kn):: leftpr,rigtpr
       real(8),dimension(2*mflx+madd,in,jn,kn):: leftco,rigtco
       real(8),dimension(2*mflx+madd):: leftst,rigtst
-      real(8),dimension(mflx):: nflux
+      real(8),dimension(mflx):: nflux,nfluxe,nfluxc
 
       real(8),dimension(jn),save :: bck,frd,ctl,ctr
       real(8),dimension(jn),save :: cf,cb
@@ -818,8 +833,11 @@
       do j=js,je+1
          leftst(:)=leftco(:,i,j,k)
          rigtst(:)=rigtco(:,i,j,k)
-         call HLLE(leftst,rigtst,nflux)
-!         call HLLC(leftst,rigtst,nflux)
+         call HLLE(leftst,rigtst,nfluxe)
+         call HLLC(leftst,rigtst,nfluxc)
+         nflux(:) = &
+     &        max(nshock(i,j,k),nshock(i,j-1,k)) *nfluxe(:)&
+     &+(1.0d0-max(nshock(i,j,k),nshock(i,j-1,k)))*nfluxc(:)
          nflux2(mden,i,j,k)=nflux(mden)
          nflux2(mrv1,i,j,k)=nflux(mrvw)
          nflux2(mrv2,i,j,k)=nflux(mrvu) ! mrv2=3, mrvu=2
@@ -880,7 +898,9 @@
      &                 , mudn,muvu,muvv,muvw,muet  &
      &                 , mfdn,mfvu,mfvv,mfvw,mfet  &
      &                 , mcsp,mvel,mpre            &
-     &                 , mden,mrvu,mrvv,mrvw,meto
+     &                 , mden,mrvu,mrvv,mrvw,meto  &
+     &                 , ncomp, mst, med
+      
 
       implicit none
       real(8),dimension(2*mflx+madd),intent(in)::leftst,rigtst
@@ -894,7 +914,8 @@
       real(8) :: rxl,ryl,rzl
       real(8) :: rxr,ryr,rzr
       real(8) :: ptst
-
+      real(8),dimension(ncomp) :: scl,scr
+      
 !----- U* ----
 ! qqlst ::  left state
 ! qqrst :: right state
@@ -902,12 +923,14 @@
       real(8) :: rorst,vxrst,vyrst,vzrst,eerst
       real(8) :: rxlst,rylst,rzlst
       real(8) :: rxrst,ryrst,rzrst
+      real(8),dimension(ncomp) :: sclst,scrst
 
 !----- flux ---
 ! fqql ::  left physical flux
 ! fqqr :: right physical flux
       real(8) :: frol,frxl,fryl,frzl,feel
       real(8) :: fror,frxr,fryr,frzr,feer
+      real(8),dimension(ncomp) :: fscl,fscr
 
 !----- wave speed ---
 ! sl ::  left-going fastest signal velocity
@@ -925,6 +948,7 @@
 ! temporary variables
       real(8) :: sdl,sdr,sdml,sdmr,isdml,isdmr,rosdl,rosdr
       real(8) :: temp
+      real(8),dimension(ncomp) :: scsdl,scsdr
   
 ! no if
       real(8) :: sign1,maxs1,mins1
@@ -942,6 +966,7 @@
         vxl = leftst(muvu)/leftst(mudn)
         vyl = leftst(muvv)/leftst(mudn)
         vzl = leftst(muvw)/leftst(mudn)
+        scl(1:ncomp) = leftst(mst:med)
         ptl = leftst(mpre)
 
 !---- Right state
@@ -954,6 +979,7 @@
         vxr = rigtst(muvu)/rigtst(mudn)
         vyr = rigtst(muvv)/rigtst(mudn)
         vzr = rigtst(muvw)/rigtst(mudn)
+        scr(1:ncomp) = rigtst(mst:med)
         ptr = rigtst(mpre)
 !----- Step 1. ----------------------------------------------------------|
 ! Compute wave left & right wave speed
@@ -973,6 +999,7 @@
         frxl = leftst(mfvu)
         fryl = leftst(mfvv)
         frzl = leftst(mfvw)
+        fscl(1:ncomp) = leftst(mst:med)
 
 ! Right value
 ! Left value
@@ -981,6 +1008,7 @@
         frxr = rigtst(mfvu)
         fryr = rigtst(mfvv) 
         frzr = rigtst(mfvw)
+        fscr(1:ncomp) = rigtst(mst:med)
 
 !----- Step 4. ----------------------------------------------------------|
 ! compute middle and alfven wave
@@ -989,6 +1017,8 @@
         sdr = sr - vxr
         rosdl = rol*sdl
         rosdr = ror*sdr
+        scsdl(1:ncomp) = scl(1:ncomp)*sdl
+        scsdr(1:ncomp) = scr(1:ncomp)*sdr
 
         temp = 1.0d0/(rosdr - rosdl)
 ! Eq. 45
@@ -1008,6 +1038,7 @@
 !
 
         rolst = rol*sdl   *isdml
+        sclst(1:ncomp) = rolst/rol*scl(1:ncomp)
         vxlst = sm
         rxlst = rolst*vxlst
            
@@ -1023,6 +1054,7 @@
 !
 
         rorst   = rosdr   *isdmr
+        scrst(1:ncomp) = rorst/ror*scr(1:ncomp)
         vxrst = sm
         rxrst = rorst*vxrst
         vyrst = vyr
@@ -1052,6 +1084,10 @@
         nflux(mrvw) = (frzl+msl*(rzlst-rzl))*maxs1 &
      &               +(frzr+msr*(rzrst-rzr))*mins1
 
+        nflux(mst:med) = &
+     &     (fscl(1:ncomp)+msl*(sclst(1:ncomp)-scl(1:ncomp)))*maxs1 &
+     &    +(fscr(1:ncomp)+msr*(scrst(1:ncomp)-scr(1:ncomp)))*mins1
+        
       return
       end subroutine HLLC
 
@@ -1109,6 +1145,41 @@
       return
       end subroutine  GravForce
 
+
+      subroutine CheckShock
+      use commons
+      use fluxmod
+      implicit none
+      integer:: i,j,k
+        
+      nshock(:,:,:) = 0.0d0
+      
+      do k=ks,ke
+      do j=js,je
+      do i=is,ie+1
+         if ( min(p(i,j,k),p(i-1,j,k)) .le. (abs(p(i,j,k)-p(i-1,j,k))+1.0d-16) )then
+            nshock(i  ,j,k) = 1.0d0
+            nshock(i-1,j,k) = 1.0d0
+         endif
+      enddo
+      enddo
+      enddo  
+
+      do k=ks,ke
+      do i=is,ie
+      do j=js,je+1
+         if ( min(p(i,j,k),p(i,j-1,k)) .le. (abs(p(i,j,k)-p(i,j-1,k))+1.0d-16) ) then
+            nshock(i,j  ,k) = 1.0d0
+            nshock(i,j-1,k) = 1.0d0
+         endif
+      enddo
+      enddo
+      enddo
+      
+      return
+      end subroutine CheckShock
+
+      
       subroutine UpdateConsv
       use commons
       use fluxmod
