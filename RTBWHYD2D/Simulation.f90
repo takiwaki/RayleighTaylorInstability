@@ -157,9 +157,10 @@
       real(8),parameter:: neu = 3.0d0
       real(8):: rho1,rho2,rho3
       real(8):: ein0
-      real(8):: pre1,pre2
-      real(8):: vel1,vel2
-      real(8):: Rexp,vol
+      real(8):: pre1,pre2,pre3
+      real(8):: vel1,vel2,vel3
+      real(8):: Rexp,Rsll
+      real(8):: vol
       real(8):: pi
       real(8):: frac,eexp
      
@@ -169,6 +170,7 @@
       
       pi =acos(-1.0d0)
       Rexp = 2000e5 ! 2000km
+      Rsll = 4000e5 ! 4000km
       
 ! blast wave
       frac = 0.8d0
@@ -178,22 +180,30 @@
       pre1 = eexp/(vol)*(gam-1.0d0)  
       vel1 = sqrt((1.0d0-frac)*eexp/vol/rho1)
 
-      rho2 = 1.0d-4*rho1 ! [g/cm^3]
-      pre2 = 1.0d-4*pre1 !
+      rho2 = 1.0d-2*rho1 ! [g/cm^3]
+      pre2 = 1.0d-2*pre1 !
+      vel2 = 0.0d0
+      
+      rho2 = 1.0d-2*rho2 ! [g/cm^3]
+      pre2 = 1.0d-2*pre2 !
       vel2 = 0.0d0
 
-      
       write(6,*) "Exploding Regin [cm]",Rexp
       write(6,*) "Eex= ",frac   ,"[10^51 erg]"
       write(6,*) "rho= ",rho1   ,"[g/cm^3]"
       write(6,*) "pre= ",pre1   ,"[erg/cm^3]"
       write(6,*) "vel= ",vel1   ,"[cm/s]"
-      
-      write(6,*) "outside"
+
+      write(6,*) "Core Radius [cm]",Rsll
       write(6,*) "rho= ",rho2   ,"[g/cm^3]"
       write(6,*) "pre= ",pre2   ,"[erg/cm^3]"
-    
-      d(:,:,:) = rho2
+
+      write(6,*) "Envelope"
+      write(6,*) "rho= ",rho3   ,"[g/cm^3]"
+      write(6,*) "pre= ",pre3   ,"[erg/cm^3]"
+
+      
+      d(:,:,:) = rho3
       Xcomp(1:ncomp,:,:,:) = 0.0d0
       
       do k=ks,ke
@@ -203,18 +213,19 @@
              d(i,j,k) = rho1
              p(i,j,k) = pre1
              v1(i,j,k) = vel1*(x1b(i)/Rexp)
-         else
+             Xcomp(1,i,j,k) = 1.0d0
+         else if(x1b(i) < Rsll)then
              d(i,j,k) = rho2
              p(i,j,k) = pre2
              v1(i,j,k) = vel2
-             
+             Xcomp(2,i,j,k) = 1.0d0
+         else
+             d(i,j,k) = rho3
+             p(i,j,k) = pre3
+             v1(i,j,k) = vel3
+             Xcomp(3,i,j,k) = 1.0d0
           endif
 
-         if(x1b(i) < 0.9d0*Rexp)then
-            Xcomp(1:ncomp,i,j,k) = 1.0d0
-         else
-             Xcomp(1:ncomp,i,j,k) = 0.0d0
-         endif
       enddo
       enddo
       enddo
@@ -353,6 +364,7 @@
       use eosmod
       implicit none
       integer::i,j,k
+      real(8)::norm
       
 !$omp parallel do collapse(3)
       do k=ks,ke
@@ -375,6 +387,8 @@
 !          cs(i,j,k) =  csiso
           
           Xcomp(1:ncomp,i,j,k) = DXcomp(1:ncomp,i,j,k)/d(i,j,k)
+          norm = sum(Xcomp(1:ncomp,i,j,k))
+          Xcomp(1:ncomp,i,j,k) = Xcomp(1:ncomp,i,j,k)/norm
       enddo
       enddo
       enddo

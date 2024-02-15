@@ -28,9 +28,10 @@ dird := bindata
 #################
 # simulation
 #################
+.PHONY: compile
 compile: ${exe} ## Compile the prgram
 
-${exe}: Simulation.f90 
+${exe}: Simulation.f90
 	${fc} ${fopt} $< -o ${exe}
 
 #################
