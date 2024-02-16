@@ -13,8 +13,8 @@ ana=Analysis.x
 # complile options
 ######################
 fc=ifort -extend-source
-#fopt=-g -traceback -O2
-fopt=-g -traceback -check all -fpe0
+fopt=-g -traceback -O2
+#fopt=-g -traceback -check all -fpe0
 
 ##########################################
 # Timeseqencial data and figures
@@ -149,6 +149,7 @@ ${XCMTPNG}: MakeSnap.sh rttpro.plt ${RPR}
 #################
 # analysis
 #################
+run: ${RPR} ## run the analysis
 
 count-number: ${countfile}
 

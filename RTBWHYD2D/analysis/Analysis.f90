@@ -21,11 +21,16 @@ module fieldmod
     real(8),dimension(:),allocatable:: x1b,x2b,dvl1a
     real(8),dimension(:),allocatable:: x1a,x2a,dvl2a
     real(8),dimension(:,:,:),allocatable:: d,v1,v2,v3,p,ei,gp
-    integer,parameter::ncomp=3
+    integer,parameter::ncomp=4
     real(8),dimension(:,:,:,:),allocatable:: Xcomp
 
     real(8):: dx
     real(8):: gam,rho0,Eexp
+
+    real(8),dimension(:),allocatable:: Mass
+    real(8),dimension(:,:),allocatable:: r_shock
+    integer,dimension(:,:),allocatable:: i_shock
+    real(8):: r_shock_ave, r_shock_min, r_shock_max
 
 end module fieldmod
 
@@ -48,6 +53,7 @@ program data_analysis
      write(6,*) "file index",incr
      call ReadData
      call Visualize1D
+     call DetectShock
      call Visualize2D
      call Integration
   enddo FILENUMBER
@@ -127,6 +133,80 @@ subroutine ReadData
   return
 end subroutine ReadData
 
+
+!=======================================================================
+!    \\\\\\\\\\       DATA_ANALYSIS                       //////////
+!    //////////       DetectShock                         \\\\\\\\\\
+!----------------------------------------------------------------------
+subroutine  DetectShock
+  use fieldmod
+  implicit none
+  integer:: i,j,k
+  real*8 :: ra
+  real*8 :: surface_shock
+  real*8 :: dcos,dphi
+  real*8,parameter:: tiny=1.0d-10
+
+  logical, save :: is_inited
+  data is_inited / .false. /
+!
+! Output
+!
+! r_shock(j,k) :          Shock Radius [cm]
+! r_shock_ave  : Averaged Shock radius [cm]
+! r_shock_min  : Minimum  Shock radius [cm]
+! r_shock_max  : Maximum  Shock radius [cm]
+!
+!ccccccccccccccccccccccccccccccccccccccccccc
+! begin
+!ccccccccccccccccccccccccccccccccccccccccccc
+  if(.not. is_inited)then
+     allocate (r_shock(jn,kn))
+     allocate (i_shock(jn,kn))
+     is_inited = .true.
+  endif
+
+!ccccccccccccccccccccccccccccccccccccccccccc
+! shock gain
+!ccccccccccccccccccccccccccccccccccccccccccc
+      do k=ks,ke
+      do j=js,je
+         i_shock(j,k) = is
+         r_shock(j,k) = 0.0d0
+         iloop_s: do i=is,ie+1,1
+!..   kon150729 shock defined as eq. (72) in Marti & Mueller '96
+            MM96: if( min(p(i+1,j,k),     p(i-1,j,k)) &
+     &   .le.   1.0d0*abs(p(i+1,j,k) -    p(i-1,j,k)) &! parameter to judge the shocked is employed
+     &   .and.           v1(i+1,j,k).lt. v1(i-1,j,k)) then
+
+     ! At the very begining we assume the shock
+            i_shock(j,k) = i
+            r_shock(j,k) = x1b(i)
+            exit iloop_s
+
+            endif MM96
+         enddo iloop_s
+      enddo
+      enddo
+
+      surface_shock = 0.0d0
+      r_shock_ave = 0.0d0
+      k=ks
+      do j=js,je
+         dcos = dvl2a(j)
+!         write(6,*) "test",dvl2a(j),dvl3a(k)
+         if ( r_shock(j,k) .ne. 0.0d0 ) then
+            surface_shock   = surface_shock +                dcos
+            r_shock_ave     = r_shock_ave   + r_shock(j,k) * dcos
+         endif
+      enddo
+      r_shock_ave = r_shock_ave /(surface_shock + tiny)
+      r_shock_min = minval(r_shock(:,:))
+      r_shock_max = maxval(r_shock(:,:))
+
+  return
+end subroutine DetectShock
+
 subroutine Visualize2D
   use unitsmod
   use fieldmod
@@ -139,6 +219,7 @@ subroutine Visualize2D
 
   real(8),dimension(:,:),allocatable,save::d2d,p2d,v12d
   real(8),dimension(:,:,:),allocatable,save::x2d
+  real(8),dimension(:),allocatable,save::rshock
 
   logical,save:: is_inited
   data is_inited / .false. /
@@ -179,14 +260,16 @@ subroutine Visualize2D
   write(filename,'(a3,i5.5,a4)')"rtp",incr,".dat"
   filename = trim(dirname)//filename
   open(unit2D,file=filename,status='replace',form='formatted')
-
-  write(unit2D,'(1a,1(1x,E12.3),a4)') "#  time_s=",time
+!                                     12345678901
+  write(unit2D,'(1a11,1(1x,E12.3))') "#  time_sc=",time
+  write(unit2D,'(1a11,1(1x,E12.3))') "#  rad_max=",x1a(ie+1)
+  write(unit2D,'(1a11,1(1x,E12.3))') "#  r_shock=",r_shock_max
 !                                     1234567890123   1234567890123   1234567890123    1234567890123   1234567890123   1234567890123
-  write(unit2D,'(1a,8(1x,a13))') "#","1:r[Rs]      ","2:theta[rad] ","3:den[g/cm^3] ","4:p[erg/cm3] ","5:vel[cm/s]  ","6:X_Ni       ","7:X_COHe     ","6:X_H        "
+  write(unit2D,'(1a,9(1x,a13))') "#","1:r[Rs]      ","2:theta[rad] ","3:den[g/cm^3] ","4:p[erg/cm3] ","5:vel[cm/s]  ","6:X_Ni       ","7:X_CO       ","8:X_He       ","9:X_H        "
 
   do j=js,je+1
   do i=is,ie
-     write(unit2D,'(1x,8(1x,E13.3))') x1b(i)/Rsolar,x2a(j),d2d(i,j),p2d(i,j),v12d(i,j),x2d(1,i,j),x2d(2,i,j),x2d(3,i,j)
+     write(unit2D,'(1x,9(1x,E13.3))') x1b(i),x2a(j),d2d(i,j),p2d(i,j),v12d(i,j),x2d(1,i,j),x2d(2,i,j),x2d(3,i,j),x2d(4,i,j)
   enddo
      write(unit2D,*)
   enddo
@@ -208,7 +291,7 @@ subroutine Visualize1D
 
   real(8),dimension(:),allocatable,save::d1d,p1d,v11d
   real(8),dimension(:,:),allocatable,save::x1d
-
+  real(8),save:: pi
   logical,save:: is_inited
   data is_inited / .false. /
 
@@ -219,6 +302,10 @@ subroutine Visualize1D
      allocate( p1d(in))
      allocate(v11d(in))
      allocate(x1d(ncomp,in))
+
+     allocate(Mass(in))
+
+     pi = acos(-1.0d0)
   endif
 
 
@@ -226,6 +313,8 @@ subroutine Visualize1D
   p1d(:) = 0.0d0
   v11d(:) = 0.0d0
   x1d(:,:) = 0.0d0
+  Mass(:) = 0.0d0
+
   k=ks
   do i=is,ie
   do j=js,je
@@ -233,23 +322,27 @@ subroutine Visualize1D
       p1d(i) =  p1d(i) +  p(i,j,k)*dvl2a(j)
      v11d(i) = v11d(i) + v1(i,j,k)*dvl2a(j)
      x1d(:,i) = x1d(:,i) + d(i,j,k)*Xcomp(:,i,j,k)*dvl2a(j)
+     Mass(i+1) = Mass(i+1) + d(i,j,k)*dvl1a(i)*dvl2a(j)*2.d0*pi
   enddo
       d1d(i) =  d1d(i)/sum(dvl2a(:))
       p1d(i) =  p1d(i)/sum(dvl2a(:))
      v11d(i) = v11d(i)/sum(dvl2a(:))
       x1d(:,i) =  x1d(:,i)/sum(dvl2a(:))/d1d(i)
+     Mass(i+1) = Mass(i) + Mass(i+1)
   enddo
 
   write(filename,'(a3,i5.5,a4)')"rpr",incr,".dat"
   filename = trim(dirname)//filename
   open(unit1D,file=filename,status='replace',form='formatted')
-!                                   1234567890
-  write(unit1D,'(a10,1(1x,E12.3))') "#  time_s=",time
+!                                    12345678901
+  write(unit1D,'(a11,1(1x,E12.3))') "#  time_sc=",time
 !                                     1234567890123   1234567890123    1234567890123   1234567890123   1234567890123   1234567890123   1234567890123
-  write(unit1D,'(1a,7(1x,a13))') "#","1:r[Rs]      ","2:den[g/cm^3] ","3:p[erg/cm3] ","4:vel[km/s]  ","5:X_Ni       ","6:X_COHe     ","5:X_Ni       "
+  write(unit1D,'(1a,9(1x,a13))') "#","1:r[cm]      ","2:M[Ms]      ","3:den[g/cm^3] ","4:p[erg/cm3] ","5:vel[cm/s]  " &
+ &                                  ,"6:X_Ni       ","7:X_CO        ","8:X_He       ","9:X_H        "
 
   do i=is,ie
-     write(unit1D,'(1x,7(1x,E13.3))') x1b(i)/Rsolar,d1d(i),p1d(i),v11d(i)/1.0d5,x1d(1,i),x1d(2,i),x1d(3,i)
+     write(unit1D,'(1x,9(1x,E13.3))') x1b(i),Mass(i)/Msolar,d1d(i),p1d(i),v11d(i) &
+                                     &,x1d(1,i),x1d(2,i),x1d(3,i),x1d(4,i)
   enddo
   close(unit1D)
 
