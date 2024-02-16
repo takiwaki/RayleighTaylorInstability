@@ -106,7 +106,7 @@ set ytics offset 0,0.7
 ####################
 # Plot
 ####################
-ofname = sprintf("figures/dnt%05d.png",ifnum)
+ofname = sprintf("figures/dentwo%05d.png",ifnum)
 print ofname
 if (pngflag==1) set output ofname
 
@@ -120,10 +120,12 @@ set cbtics offset 0,3.2
 #cmax=5
 #set cbrange [cmin:cmax]
 
+set title "log_{10} (Density [g/cm^3])"
+
 # Main plot
 splot [-srange:srange][-srange:srange] \
-  ifnames u ( $1/xnorm*sin($2)):($1/xnorm*cos($2)):($1/xnorm<srange?($3):NaN) w pm3d \
-, ifnames u (-$1/xnorm*sin($2)):($1/xnorm*cos($2)):($1/xnorm<srange?($3):NaN) w pm3d \
+  ifnames u ( $1/xnorm*sin($2)):($1/xnorm*cos($2)):($1/xnorm<srange?(log($3)):NaN) w pm3d \
+, ifnames u (-$1/xnorm*sin($2)):($1/xnorm*cos($2)):($1/xnorm<srange?(log($3)):NaN) w pm3d \
 
 unset label
 
@@ -131,9 +133,11 @@ unset label
 ####################
 # Plot
 ####################
-ofname = sprintf("figures/xct%05d.png",ifnum)
+ofname = sprintf("figures/xcmtwo%05d.png",ifnum)
 print ofname
 if (pngflag==1) set output ofname
+
+set title "X, Ni=4, CO=3, He=2, H=1"
 
 set palette define (1.0 "black",2.0 "blue", 3.0 "green", 4.0 "red")
 set cbrange [1:4]

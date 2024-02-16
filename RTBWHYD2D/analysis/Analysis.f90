@@ -257,7 +257,7 @@ subroutine Visualize2D
   enddo
 
 
-  write(filename,'(a3,i5.5,a4)')"rtp",incr,".dat"
+  write(filename,'(a6,i5.5,a4)')"twopro",incr,".dat"
   filename = trim(dirname)//filename
   open(unit2D,file=filename,status='replace',form='formatted')
 !                                     12345678901
@@ -331,7 +331,7 @@ subroutine Visualize1D
      Mass(i+1) = Mass(i) + Mass(i+1)
   enddo
 
-  write(filename,'(a3,i5.5,a4)')"rpr",incr,".dat"
+  write(filename,'(a6,i5.5,a4)')"onepro",incr,".dat"
   filename = trim(dirname)//filename
   open(unit1D,file=filename,status='replace',form='formatted')
 !                                    12345678901

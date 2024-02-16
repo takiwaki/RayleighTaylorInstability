@@ -12,7 +12,7 @@ ana=Analysis.x
 ######################	
 # complile options
 ######################
-fc=ifort -extend-source
+fc=ifort
 fopt=-g -traceback -O2
 #fopt=-g -traceback -check all -fpe0
 
@@ -44,18 +44,18 @@ else
 endif
 
 # 1D radial profile
-RPR   = $(patsubst ${dird}/unf%.dat,${dira}/rpr%.dat,$(BIN))
-DENPNG= $(patsubst ${dira}/rpr%.dat,${dirf}/den%.png,$(RPR))
-VELPNG= $(patsubst ${dira}/rpr%.dat,${dirf}/vel%.png,$(RPR))
-PREPNG= $(patsubst ${dira}/rpr%.dat,${dirf}/pre%.png,$(RPR))
-XCMPNG= $(patsubst ${dira}/rpr%.dat,${dirf}/xcm%.png,$(RPR))
+ONEPRO    = $(patsubst ${dird}/unf%.dat,${dira}/rpr%.dat,$(BIN))
+DENONEPNG = $(patsubst ${dira}/rpr%.dat,${dirf}/den%.png,$(ONEPRO))
+VELONEPNG = $(patsubst ${dira}/rpr%.dat,${dirf}/vel%.png,$(ONEPRO))
+PREONEPNG = $(patsubst ${dira}/rpr%.dat,${dirf}/pre%.png,$(ONEPRO))
+XCMONEPNG = $(patsubst ${dira}/rpr%.dat,${dirf}/xcm%.png,$(ONEPRO))
 
 
-RTP    = $(patsubst ${dird}/unf%.dat,${dira}/rtp%.dat,$(BIN))
-DENTPNG= $(patsubst ${dira}/rtp%.dat,${dirf}/dnt%.png,$(RTP))
-#VELTPNG= $(patsubst ${dira}/rtp%.dat,${dirf}/vel%.png,$(RTP))
-#PRETPNG= $(patsubst ${dira}/rtp%.dat,${dirf}/pre%.png,$(RTP))
-XCTTPNG= $(patsubst ${dira}/rtp%.dat,${dirf}/xct%.png,$(RTP))
+TWOPRO    = $(patsubst ${dird}/unf%.dat,${dira}/rtp%.dat,$(BIN))
+DENTWOPNG = $(patsubst ${dira}/rtp%.dat,${dirf}/dnt%.png,$(TWOPRO))
+#VELTWOPNG = $(patsubst ${dira}/rtp%.dat,${dirf}/vel%.png,$(TWOPRO))
+#PRETWOPNG = $(patsubst ${dira}/rtp%.dat,${dirf}/pre%.png,$(TWOPRO))
+XCMTWOPNG = $(patsubst ${dira}/rtp%.dat,${dirf}/xct%.png,$(TWOPRO))
 
 
 # intgrated values 
@@ -65,16 +65,15 @@ TOT   = $(patsubst ${dird}/unf%.dat,${dira}/tot%.dat,$(BIN))
 # Movies
 ##########################################
 
-denmovie=${dirm}/aniden.mp4
-velmovie=${dirm}/anivel.mp4
-premovie=${dirm}/anipre.mp4
-xcmmovie=${dirm}/anixcm.mp4
+denonemovie=${dirm}/aniden_one.mp4
+velonemovie=${dirm}/anivel_one.mp4
+preonemovie=${dirm}/anipre_one.mp4
+xcmonemovie=${dirm}/anixcm_one.mp4
 
+dentwomovie=${dirm}/aniden_two.mp4
+xcmtwomovie=${dirm}/anixcm_two.mp4
 
-dntmovie=${dirm}/anidnt.mp4
-xctmovie=${dirm}/anixct.mp4
-
-movies = ${denmovie} ${velmovie} ${premovie} ${dntmovie}
+movies = ${denonemovie} ${velonemovie} ${preonemovie} ${xcmonemovie} ${dentwomovie} ${xcmtwomovie}
 ##########################################
 # Time evolution
 ##########################################
@@ -107,55 +106,63 @@ t-prof.dat: MakeTimeseq.sh ${TOT}
 .PHONY: movie
 movie: ${movies} ## Make movie
 
-${denmovie}: MakeMovie.sh ${DENPNG}
-	./MakeMovie.sh den
+${denonemovie}: MakeMovie.sh ${DENONEPNG}
+	./MakeMovie.sh denone
 
-${velmovie}: MakeMovie.sh ${VELPNG}
-	./MakeMovie.sh vel
+${velonemovie}: MakeMovie.sh ${VELONEPNG}
+	./MakeMovie.sh velone
 
-${premovie}: MakeMovie.sh ${PREPNG}
-	./MakeMovie.sh pre
+${preonemovie}: MakeMovie.sh ${PREONEPNG}
+	./MakeMovie.sh preone
 
-${xcmmovie}: MakeMovie.sh ${XCMPNG}
-	./MakeMovie.sh xcm
+${xcmonemovie}: MakeMovie.sh ${XCMONEPNG}
+	./MakeMovie.sh xcmone
 
-${dntmovie}: MakeMovie.sh ${DENTPNG}
-	./MakeMovie.sh dnt
+${dentwomovie}: MakeMovie.sh ${DENTWOPNG}
+	./MakeMovie.sh dentwo
 
-${xctmovie}: MakeMovie.sh ${XCTTPNG}
-	./MakeMovie.sh xct
+${xcmtwomovie}: MakeMovie.sh ${XCMTWOPNG}
+	./MakeMovie.sh xcmtwo
 
 #################
 # gnuplot
 #################
+.PHONY: onedim
+onedim: ${DENONEPNG} ${VELONEPNG} ${PREONEPNG} ${XCMONEPNG}  ## Make one-dimentional plot
 
-${DENPNG}: MakeSnap.sh Plot1D.plt ${RPR}
+${DENONEPNG}: MakeSnap.sh Plot1D.plt ${ONEPRO}
 	./MakeSnap.sh rpr Plot1D.plt
 
-${velPNG}: MakeSnap.sh Plot1D.plt ${RPR}
+${VELONEPNG}: MakeSnap.sh Plot1D.plt ${ONEPRO}
 	./MakeSnap.sh rpr Plot1D.plt
 
-${PREPNG}: MakeSnap.sh Plot1D.plt ${RPR}
+${PREONEPNG}: MakeSnap.sh Plot1D.plt ${ONEPRO}
 	./MakeSnap.sh rpr Plot1D.plt
 
-${DENTPNG}: MakeSnap.sh Plot2D.plt ${RPR}
+.PHONY: twodim
+twodim: ${DENTWOPNG} ${XCMTWOPNG}  ## Make two-dimentional plot
+
+${DENTWOPNG}: MakeSnap.sh Plot2D.plt ${TWOPRO}
 	./MakeSnap.sh rtp Plot2D.plt
 
-${XCMTPNG}: MakeSnap.sh Plot2D.plt ${RPR}
+${XCMTWOPNG}: MakeSnap.sh Plot2D.plt ${TWOPRO}
 	./MakeSnap.sh rtp Plot2D.plt
 
 
 #################
 # analysis
 #################
-run: ${RPR} ## run the analysis
+run: ${ONEPRO} ${TWOPRO} ## run the analysis
 
 count-number: ${countfile}
 
 ${countfile}: CountBindata.sh
 	./CountBindata.sh
 
-${RPR}: ${ana} ${BIN} ${countfile}
+${ONEPRO}: ${ana} ${BIN} ${countfile}
+	./${ana}
+
+${TWOPRO}: ${ana} ${BIN} ${countfile}
 	./${ana}
 
 ${TOT}: ${ana} ${BIN} ${countfile}

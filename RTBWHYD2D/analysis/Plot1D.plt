@@ -1,3 +1,4 @@
+
 #####################
 # initialize
 ######################
@@ -44,7 +45,7 @@ set xlabel "Radius [10^{10} cm]" offset 0,0
 # Pressure
 ##########################
 
-ofname = sprintf("figures/pre%05d.png",ifnum)
+ofname = sprintf("figures/preone%05d.png",ifnum)
 set output ofname
 
 set label 1 timetxt at screen 0.45, screen 0.845
@@ -62,7 +63,7 @@ print ofname." is written"
 # density
 ##########################_
 
-ofname = sprintf("figures/den%05d.png",ifnum)
+ofname = sprintf("figures/denone%05d.png",ifnum)
 set output ofname
 
 set label 1 timetxt at screen 0.45, screen 0.845
@@ -79,7 +80,7 @@ print ofname." is written"
 # velocity
 ##########################_
 
-ofname = sprintf("figures/vel%05d.png",ifnum)
+ofname = sprintf("figures/velone%05d.png",ifnum)
 set output ofname
 
 set label 1 timetxt at screen 0.45, screen 0.845
@@ -97,7 +98,7 @@ print ofname." is written"
 # X
 ##########################_
 
-ofname = sprintf("figures/xcm%05d.png",ifnum)
+ofname = sprintf("figures/xcmone%05d.png",ifnum)
 set output ofname
 
 set label 1 timetxt at screen 0.45, screen 0.845
