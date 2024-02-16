@@ -44,18 +44,18 @@ else
 endif
 
 # 1D radial profile
-ONEPRO    = $(patsubst ${dird}/unf%.dat,${dira}/rpr%.dat,$(BIN))
-DENONEPNG = $(patsubst ${dira}/rpr%.dat,${dirf}/den%.png,$(ONEPRO))
-VELONEPNG = $(patsubst ${dira}/rpr%.dat,${dirf}/vel%.png,$(ONEPRO))
-PREONEPNG = $(patsubst ${dira}/rpr%.dat,${dirf}/pre%.png,$(ONEPRO))
-XCMONEPNG = $(patsubst ${dira}/rpr%.dat,${dirf}/xcm%.png,$(ONEPRO))
+ONEPRO    = $(patsubst ${dird}/unf%.dat,${dira}/onepro%.dat,$(BIN))
+DENONEPNG = $(patsubst ${dira}/onepro%.dat,${dirf}/denone%.png,$(ONEPRO))
+VELONEPNG = $(patsubst ${dira}/onepro%.dat,${dirf}/velone%.png,$(ONEPRO))
+PREONEPNG = $(patsubst ${dira}/onepro%.dat,${dirf}/preone%.png,$(ONEPRO))
+XCMONEPNG = $(patsubst ${dira}/onepro%.dat,${dirf}/xcmone%.png,$(ONEPRO))
 
 
-TWOPRO    = $(patsubst ${dird}/unf%.dat,${dira}/rtp%.dat,$(BIN))
-DENTWOPNG = $(patsubst ${dira}/rtp%.dat,${dirf}/dnt%.png,$(TWOPRO))
+TWOPRO    = $(patsubst ${dird}/unf%.dat,${dira}/twopro%.dat,$(BIN))
+DENTWOPNG = $(patsubst ${dira}/twopro%.dat,${dirf}/dentwo%.png,$(TWOPRO))
 #VELTWOPNG = $(patsubst ${dira}/rtp%.dat,${dirf}/vel%.png,$(TWOPRO))
 #PRETWOPNG = $(patsubst ${dira}/rtp%.dat,${dirf}/pre%.png,$(TWOPRO))
-XCMTWOPNG = $(patsubst ${dira}/rtp%.dat,${dirf}/xct%.png,$(TWOPRO))
+XCMTWOPNG = $(patsubst ${dira}/twopro%.dat,${dirf}/xcmtwo%.png,$(TWOPRO))
 
 
 # intgrated values 
@@ -131,22 +131,22 @@ ${xcmtwomovie}: MakeMovie.sh ${XCMTWOPNG}
 onedim: ${DENONEPNG} ${VELONEPNG} ${PREONEPNG} ${XCMONEPNG}  ## Make one-dimentional plot
 
 ${DENONEPNG}: MakeSnap.sh Plot1D.plt ${ONEPRO}
-	./MakeSnap.sh rpr Plot1D.plt
+	./MakeSnap.sh onepro Plot1D.plt
 
 ${VELONEPNG}: MakeSnap.sh Plot1D.plt ${ONEPRO}
-	./MakeSnap.sh rpr Plot1D.plt
+	./MakeSnap.sh onepro Plot1D.plt
 
 ${PREONEPNG}: MakeSnap.sh Plot1D.plt ${ONEPRO}
-	./MakeSnap.sh rpr Plot1D.plt
+	./MakeSnap.sh onepro Plot1D.plt
 
 .PHONY: twodim
 twodim: ${DENTWOPNG} ${XCMTWOPNG}  ## Make two-dimentional plot
 
 ${DENTWOPNG}: MakeSnap.sh Plot2D.plt ${TWOPRO}
-	./MakeSnap.sh rtp Plot2D.plt
+	./MakeSnap.sh twopro Plot2D.plt
 
 ${XCMTWOPNG}: MakeSnap.sh Plot2D.plt ${TWOPRO}
-	./MakeSnap.sh rtp Plot2D.plt
+	./MakeSnap.sh twopro Plot2D.plt
 
 
 #################

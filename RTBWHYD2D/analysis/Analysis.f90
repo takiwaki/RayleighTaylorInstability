@@ -32,6 +32,13 @@ module fieldmod
     integer,dimension(:,:),allocatable:: i_shock
     real(8):: r_shock_ave, r_shock_min, r_shock_max
 
+    real(8),dimension(:),allocatable::d1d,p1d,v11d
+    real(8),dimension(:,:),allocatable::x1d
+
+    real(8),dimension(:,:),allocatable::d2d,p2d,v12d
+    real(8),dimension(:,:,:),allocatable::x2d
+    real(8),dimension(:,:),allocatable::deld2d
+
 end module fieldmod
 
 program data_analysis
@@ -217,20 +224,19 @@ subroutine Visualize2D
   character(40)::filename
   integer,parameter::unit2D=432
 
-  real(8),dimension(:,:),allocatable,save::d2d,p2d,v12d
-  real(8),dimension(:,:,:),allocatable,save::x2d
-  real(8),dimension(:),allocatable,save::rshock
-
   logical,save:: is_inited
   data is_inited / .false. /
 
   if(.not. is_inited)then
      call makedirs(dirname)
-     is_inited = .true.
      allocate( d2d(in,jn))
      allocate( p2d(in,jn))
      allocate(v12d(in,jn))
      allocate( x2d(ncomp,in,jn))
+
+     allocate( deld2d(in,jn))
+
+     is_inited = .true.
   endif
 
   k = ks
@@ -256,6 +262,13 @@ subroutine Visualize2D
   enddo
   enddo
 
+  do j=js,je+1
+  do i=is,ie
+       deld2d(i,j) = (d2d(i,j)-d1d(i))/d1d(i)  
+  enddo
+  enddo
+
+
 
   write(filename,'(a6,i5.5,a4)')"twopro",incr,".dat"
   filename = trim(dirname)//filename
@@ -265,11 +278,15 @@ subroutine Visualize2D
   write(unit2D,'(1a11,1(1x,E12.3))') "#  rad_max=",x1a(ie+1)
   write(unit2D,'(1a11,1(1x,E12.3))') "#  r_shock=",r_shock_max
 !                                     1234567890123   1234567890123   1234567890123    1234567890123   1234567890123   1234567890123
-  write(unit2D,'(1a,9(1x,a13))') "#","1:r[Rs]      ","2:theta[rad] ","3:den[g/cm^3] ","4:p[erg/cm3] ","5:vel[cm/s]  ","6:X_Ni       ","7:X_CO       ","8:X_He       ","9:X_H        "
+  write(unit2D,'(1a,10(1x,a13))') "#","1:r[Rs]      ","2:theta[rad] ","3:den[g/cm^3] ","4:p[erg/cm3] " &
+                               &    ,"5:vel[cm/s]  ","6:dden       " &
+                               &    ,"7:X_Ni       ","8:X_CO       ","9:X_He        ","10:X_H        "
 
   do j=js,je+1
   do i=is,ie
-     write(unit2D,'(1x,9(1x,E13.3))') x1b(i),x2a(j),d2d(i,j),p2d(i,j),v12d(i,j),x2d(1,i,j),x2d(2,i,j),x2d(3,i,j),x2d(4,i,j)
+     write(unit2D,'(1x,10(1x,E13.3))') x1b(i),x2a(j),d2d(i,j),p2d(i,j) & 
+                                  &   ,v12d(i,j), deld2d(i,j) &
+                                  &   ,x2d(1,i,j),x2d(2,i,j),x2d(3,i,j),x2d(4,i,j)
   enddo
      write(unit2D,*)
   enddo
@@ -289,8 +306,6 @@ subroutine Visualize1D
   character(40)::filename
   integer,parameter::unit1D=123
 
-  real(8),dimension(:),allocatable,save::d1d,p1d,v11d
-  real(8),dimension(:,:),allocatable,save::x1d
   real(8),save:: pi
   logical,save:: is_inited
   data is_inited / .false. /

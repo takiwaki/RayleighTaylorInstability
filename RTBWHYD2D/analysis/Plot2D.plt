@@ -37,7 +37,7 @@ if (exist("ifnum")==0 ) ifnum=100
 
 print ifnum
 # Scalar
-ifnames = sprintf("output/rtp%05d.dat",ifnum)
+ifnames = sprintf("output/twopro%05d.dat",ifnum)
 
 # Stop Ploting
 command = sprintf("ls %s 1> /dev/null 2> /dev/null ; echo $? ",ifnames)
@@ -129,6 +129,32 @@ splot [-srange:srange][-srange:srange] \
 
 unset label
 
+####################
+# Plot
+####################
+ofname = sprintf("figures/dldtwo%05d.png",ifnum)
+print ofname
+if (pngflag==1) set output ofname
+
+# Position of color bar
+set colorbox horizontal user origin 0.235, 0.87 size 0.5, 0.04
+set cbtics offset 0,3.2
+
+# Range of color bar
+# range of the variable
+#cmin=0
+#cmax=5
+#set cbrange [cmin:cmax]
+
+set title "{/Symbol d}Density"
+
+# Main plot
+splot [-srange:srange][-srange:srange] \
+  ifnames u ( $1/xnorm*sin($2)):($1/xnorm*cos($2)):($1/xnorm<srange?($6):NaN) w pm3d \
+, ifnames u (-$1/xnorm*sin($2)):($1/xnorm*cos($2)):($1/xnorm<srange?($6):NaN) w pm3d \
+
+unset label
+
 
 ####################
 # Plot
@@ -143,8 +169,8 @@ set palette define (1.0 "black",2.0 "blue", 3.0 "green", 4.0 "red")
 set cbrange [1:4]
 
 splot [-srange:srange][-srange:srange] \
-  ifnames u ( $1/xnorm*sin($2)):($1/xnorm*cos($2)):($1/xnorm<srange?(4*$6+3*$7+2*$8+$9):NaN) w pm3d \
-, ifnames u (-$1/xnorm*sin($2)):($1/xnorm*cos($2)):($1/xnorm<srange?(4*$6+3*$7+2*$8+$9):NaN) w pm3d \
+  ifnames u ( $1/xnorm*sin($2)):($1/xnorm*cos($2)):($1/xnorm<srange?(4*$7+3*$8+2*$9+$10):NaN) w pm3d \
+, ifnames u (-$1/xnorm*sin($2)):($1/xnorm*cos($2)):($1/xnorm<srange?(4*$7+3*$8+2*$9+$10):NaN) w pm3d \
 
 unset label
 

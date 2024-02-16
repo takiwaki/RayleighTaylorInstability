@@ -22,7 +22,7 @@ set term pngcairo enhanced font "Helvetica, 12" size 640,480
 
 if (exist("ifnum")==0 ) ifnum=100
 
-ifnames = sprintf("output/rpr%05d.dat",ifnum)
+ifnames = sprintf("output/onepro%05d.dat",ifnum)
 
 command = sprintf("ls %s 1> /dev/null 2> /dev/null ; echo $? ",ifnames)
 flag=0
