@@ -21,7 +21,8 @@
       data time / 0.0d0 /
       real(8),parameter:: timemax=3.0d2 ! [s]
       real(8),parameter:: dtout=timemax/500
-
+      real(8):: tout
+      data tout / 0.0d0 /
       integer,parameter::izones=200
       integer,parameter::jzones=100
       integer,parameter::mgn=2
@@ -48,7 +49,7 @@
       real(8),dimension(in,jn,kn)::p,ei,v1,v2,v3,cs
       real(8),dimension(in,jn,kn)::gp,gp1a,gp2a
 
-      integer,parameter::ncomp=3 ! composition
+      integer,parameter::ncomp=4 ! composition
       real(8),dimension(ncomp,in,jn,kn):: DXcomp
       real(8),dimension(ncomp,in,jn,kn)::  Xcomp
       
@@ -92,6 +93,7 @@
       call GenerateGrid
       call GenerateProblem
       call ConsvVariable
+      call Output
       write(6,*) "entering main loop"
 ! main loop
       write(6,*)"step","time [s]","dt [s]"
@@ -106,7 +108,7 @@
          call UpdateConsv
          call PrimVariable
          time=time+dt
-         call Output
+         if(time .ge. tout+dtout) call Output
          if(time > timemax) exit mloop
       enddo mloop
 
@@ -118,7 +120,7 @@
       implicit none
       real(8)::dx,dy
       integer::i,j,k
-      logical,parameter:: logMesh=.true.
+      logical,parameter:: logMesh=.false.
       
       integer:: iter,nbl
       real(8):: x1r,fn,dfndx1r,deltx1r,errx1r
@@ -147,11 +149,10 @@
             print *, "coordinate error",errx1r
             stop
          endif
-         
          dx = dx1min
          x1a(is) = x1min
 
-         do i=is-1,is-mgn
+         do i=is-1,is-mgn,-1
             x1a(i) = x1a(i+1) - dx
          enddo
          
@@ -200,89 +201,93 @@
       use eosmod
       implicit none
       integer::i,j,k
-      real(8),parameter:: neu = 3.0d0
       real(8):: ein0
-      real(8):: Rexp,Rcor
-      real(8):: M1,M2
-      real(8):: rho1,rho2,rho3
-      real(8):: pre1,pre2,pre3
-      real(8):: vel1,vel2,vel3
-      real(8):: vol1,vol2,vol3
+      real(8),dimension(ncomp):: Rshell,rho,pre,Mshell,Eshell
+      real(8):: rhoexp,preexp,velexp,volexp,Mexp,Eexp
       real(8):: pi
-      real(8):: frac,eexp
      
       integer,dimension(2) :: seed
       real(8),dimension(1) :: rnum
-      real(8),parameter :: rrv =1.0d-1
-      
+      real(8),parameter :: rrv =1.0d-1      
+      real(8):: slope
       pi =acos(-1.0d0)
     
 ! Explosion occurs in the center
-      Rexp = 2000e5 ! 2000km
-      M1   = 1.0d0
-      frac = 0.8d0
-      vol1  = (4.0*pi/3.0d0*Rexp**3-4.0*pi/3.0d0*x1min**3)
-      rho1 = (M1*Msolar)/vol1
-      eexp = frac*(1.0d51)
-      pre1 = eexp/(vol1)*(gam-1.0d0)  
-      vel1 = sqrt((1.0d0-frac)*eexp/vol1/rho1)
+      Rshell(1) = 2.0d8 ! 2000km
+      Mexp   = 1.0d0  ! [M_s]
+      Eexp   = 0.8d51 ! [erg]
+      volexp = (4.0*pi/3.0d0*Rshell(1)**3-4.0*pi/3.0d0*x1min**3) ! [cm^-3]
+      rhoexp = (Mexp*Msolar)/volexp      ! [g/cm^-3]
+      preexp = Eexp/(volexp)*(gam-1.0d0) ! [erg/cm^-3]
+      velexp = sqrt(0.2d51/volexp/rhoexp)! [cm/s]
 
-! Radius of core
-      Rcor = 10.0d0*Rexp
-      M2   = 3.0d0
-      vol2 =  (4.0*pi/3.0d0*Rcor**3-4.0*pi/3.0d0*Rexp**3)
-      rho2 = (M2*Msolar)/vol2 ! [g/cm^3]
-      pre2 = 1.0d17*rho2 !
-      vel2 = 0.0d0
+      slope = 0.0d0
+      Rshell(2) = 3.0d9  ! CO core
+      Rshell(3) = 3.0d10 ! He core
+      Rshell(4) = x1max  ! ounter boundary
+      rho(1) = rhoexp ! steller density at r~2e8 g/cm^3   ! CO<-|
+!      rho(1) = 1.0d7 ! steller density at r~2e8 g/cm^3   ! CO<-|
+      rho(2) = 1.0e-2*rho(1)*(Rshell(2)/Rshell(1))**(-slope) ! CO  |-> He
+      rho(3) = 1.0e0*rho(2)*(Rshell(3)/Rshell(2))**(-slope) ! He  |-> H
+      rho(4) =        rho(3)*(Rshell(4)/Rshell(3))**(-slope)
+      pre(1) = 1.0d16*rho(1) ! steller pressure at r~2e8 g/cm^3
+      pre(2) = 1.0d15*rho(2)       
+      pre(3) = 1.0d15*rho(3)
+      pre(4) = 1.0d15*rho(4)
       
-      rho3 = 1.0d-2*rho2 ! [g/cm^3]
-      pre3 = 1.0d15*rho3 !
-      vel3 = 0.0d0
-
-      write(6,*) "Exploding Regin [cm]",Rexp
-      write(6,*) "Eex= ",frac   ,"[10^51 erg]"
-      write(6,*) "M1 = ",M1     ,"[M_s]"
-      write(6,*) "rho= ",rho1   ,"[g/cm^3]"
-      write(6,*) "pre= ",pre1   ,"[erg/cm^3]"
-      write(6,*) "vel= ",vel1   ,"[cm/s]"
-
-      write(6,*) "Core Radius [cm]",Rcor
-      write(6,*) "M2 = ",M2     ,"[M_s]"
-      write(6,*) "rho= ",rho2   ,"[g/cm^3]"
-      write(6,*) "pre= ",pre2   ,"[erg/cm^3]"
-
-      write(6,*) "Outer boundary [cm]",x1max
-      write(6,*) "Envelope"
-      write(6,*) "rho= ",rho3   ,"[g/cm^3]"
-      write(6,*) "pre= ",pre3   ,"[erg/cm^3]"
-      
-      d(:,:,:) = rho3
+      d(:,:,:) = rho(4)
       Xcomp(1:ncomp,:,:,:) = 1.0d-10
       
       do k=ks,ke
       do j=js,je
       do i=is,ie
-         if(x1b(i) < Rexp)then
-             d(i,j,k) = rho1
-             p(i,j,k) = pre1
-             v1(i,j,k) = vel1*(x1b(i)/Rexp)
-             Xcomp(1,i,j,k) = 1.0d0
-         else if(x1b(i) < Rcor)then
-             d(i,j,k) = rho2
-             p(i,j,k) = pre2
-             v1(i,j,k) = vel2
+         if(x1b(i) < Rshell(1))then
+             d(i,j,k) = rhoexp
+             p(i,j,k) = preexp
+             v1(i,j,k) = velexp*(x1b(i)/Rshell(1))
+             Xcomp(1,i,j,k) = 1.0d0 ! Ni
+             Eshell(1) = Eshell(1)  &
+   &  +(0.5*d(i,j,k)*v1(i,j,k)**2+p(i,j,k)/(gam-1.0d0))*dvl1a(i)*dvl2a(j)*2.0d0*pi
+             Mshell(1) = Mshell(1)+            d(i,j,k)*dvl1a(i)*dvl2a(j)*2.0d0*pi
+         else if(x1b(i) < Rshell(2))then ! CO core
+             ! x1b(i) > Rshell(1)
+             d(i,j,k) = rho(1)*(x1b(i)/Rshell(1))**(-slope)
+             p(i,j,k) = pre(1)*(x1b(i)/Rshell(1))**(-slope)
+             v1(i,j,k) = 0.0d0
              Xcomp(2,i,j,k) = 1.0d0
-         else
-             d(i,j,k) = rho3
-             p(i,j,k) = pre3
-             v1(i,j,k) = vel3
+             Mshell(2) = Mshell(2)+ d(i,j,k)*dvl1a(i)*dvl2a(j)*2.0d0*pi
+         else if(x1b(i) < Rshell(3))then ! He core
+             ! x1b(i) > Rshell(2)
+             d(i,j,k) = rho(2)*(x1b(i)/Rshell(2))**(-slope)
+             p(i,j,k) = pre(2)*(x1b(i)/Rshell(2))**(-slope)
+             v1(i,j,k) = 0.0d0
              Xcomp(3,i,j,k) = 1.0d0
+             Mshell(3) = Mshell(3)+ d(i,j,k)*dvl1a(i)*dvl2a(j)*2.0d0*pi
+         else ! Hydrogen envelope
+             ! x1b(i) > Rshell(3)
+             d(i,j,k) = rho(3)*(x1b(i)/Rshell(3))**(-slope)
+             p(i,j,k) = pre(3)*(x1b(i)/Rshell(3))**(-slope)
+             v1(i,j,k) = 0.0d0
+             Xcomp(4,i,j,k) = 1.0d0
+             Mshell(4) = Mshell(4)+ d(i,j,k)*dvl1a(i)*dvl2a(j)*2.0d0*pi
           endif
-
       enddo
       enddo
       enddo
-
+      
+      v2(:,:,:) = 0.0d0
+      v3(:,:,:) = 0.0d0
+      
+      write(6,*) "Exploding Regin [cm]",Rshell(1)
+      write(6,*) "Eex= ",Eshell(1)/1.0d51,"[10^51 erg]"
+      write(6,*) "Mexp=",Mshell(1)/Msolar,"[M_s]"
+      write(6,*) "CO core Radius [cm]",Rshell(2)
+      write(6,*) "M_CO= ",Mshell(2)/Msolar,"[M_s]"
+      write(6,*) "He core Radius [cm]",Rshell(3)
+      write(6,*) "M_He= ",Mshell(3)/Msolar,"[M_s]"
+      write(6,*) "Outer boundary [cm]",x1max
+      write(6,*) "M_env=",Mshell(4)/Msolar,"[M_s]"
+      
       write(6,*) rrv*100.0d0 &
      & , "% of Randam Perturbation imposed on density"
       seed(1) = 1
@@ -297,8 +302,6 @@
       enddo
       enddo
       enddo
-
-      
       
       do k=ks,ke
       do j=js,je
@@ -735,7 +738,6 @@
          nflux(:) =  &
      &        max(nshock(i-1,j,k),nshock(i,j,k)) *nfluxe(:) &
      &+(1.0d0-max(nshock(i-1,j,k),nshock(i,j,k)))*nfluxc(:)
-         
          nflux1(mden,i,j,k)=nflux(mden)
          nflux1(mrv1,i,j,k)=nflux(mrvu)
          nflux1(mrv2,i,j,k)=nflux(mrvv)
@@ -1227,7 +1229,8 @@
       do k=ks,ke
       do j=js,je
       do i=is,ie+1
-         if ( min(p(i,j,k),p(i-1,j,k)) .le. (abs(p(i,j,k)-p(i-1,j,k))+1.0d-16) )then
+         if ( min(p(i,j,k),p(i-1,j,k)) .le. (abs(p(i,j,k)-p(i-1,j,k))+1.0d-16) &
+     &   .and.              v1(i,j,k)  .lt. v1(i-1,j,k) ) then
             nshock(i  ,j,k) = 1.0d0
             nshock(i-1,j,k) = 1.0d0
          endif
@@ -1238,7 +1241,8 @@
       do k=ks,ke
       do i=is,ie
       do j=js,je+1
-         if ( min(p(i,j,k),p(i,j-1,k)) .le. (abs(p(i,j,k)-p(i,j-1,k))+1.0d-16) ) then
+         if ( min(p(i,j,k),p(i,j-1,k)) .le. (abs(p(i,j,k)-p(i,j-1,k))+1.0d-16) & 
+     &   .and.              v2(i,j,k)  .lt. v2(i,j-1,k) ) then
             nshock(i,j  ,k) = 1.0d0
             nshock(i,j-1,k) = 1.0d0
          endif
@@ -1360,8 +1364,6 @@
       integer::i,j,k,n
       character(20),parameter::dirname="bindata/"
       character(40)::filename
-      real(8),save::tout
-      data tout / 0.0d0 /
       integer::nout
       data nout / 1 /
       integer,parameter:: unitout=17
@@ -1379,8 +1381,6 @@
          call makedirs("bindata")
          is_inited =.true.
       endif
-
-      if(time .lt. tout+dtout) return
 
       write(filename,'(a3,i5.5,a4)')"unf",nout,".dat"
       filename = trim(dirname)//filename
