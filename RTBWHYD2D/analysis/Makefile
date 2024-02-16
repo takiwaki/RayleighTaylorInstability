@@ -129,21 +129,20 @@ ${xctmovie}: MakeMovie.sh ${XCTTPNG}
 # gnuplot
 #################
 
-${DENPNG}: MakeSnap.sh radpro.plt ${RPR}
-	./MakeSnap.sh rpr radpro.plt
+${DENPNG}: MakeSnap.sh Plot1D.plt ${RPR}
+	./MakeSnap.sh rpr Plot1D.plt
 
-${velPNG}: MakeSnap.sh radpro.plt ${RPR}
-	./MakeSnap.sh rpr radpro.plt
+${velPNG}: MakeSnap.sh Plot1D.plt ${RPR}
+	./MakeSnap.sh rpr Plot1D.plt
 
-${PREPNG}: MakeSnap.sh radpro.plt ${RPR}
-	./MakeSnap.sh rpr radpro.plt
+${PREPNG}: MakeSnap.sh Plot1D.plt ${RPR}
+	./MakeSnap.sh rpr Plot1D.plt
 
-${DENTPNG}: MakeSnap.sh rttpro.plt ${RPR}
-	./MakeSnap.sh rtp rttpro.plt
+${DENTPNG}: MakeSnap.sh Plot2D.plt ${RPR}
+	./MakeSnap.sh rtp Plot2D.plt
 
-${XCMTPNG}: MakeSnap.sh rttpro.plt ${RPR}
-	./MakeSnap.sh rtp rttpro.plt
-
+${XCMTPNG}: MakeSnap.sh Plot2D.plt ${RPR}
+	./MakeSnap.sh rtp Plot2D.plt
 
 
 #################
