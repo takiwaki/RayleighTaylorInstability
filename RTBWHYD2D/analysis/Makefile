@@ -48,11 +48,15 @@ RPR   = $(patsubst ${dird}/unf%.dat,${dira}/rpr%.dat,$(BIN))
 DENPNG= $(patsubst ${dira}/rpr%.dat,${dirf}/den%.png,$(RPR))
 VELPNG= $(patsubst ${dira}/rpr%.dat,${dirf}/vel%.png,$(RPR))
 PREPNG= $(patsubst ${dira}/rpr%.dat,${dirf}/pre%.png,$(RPR))
+XCMPNG= $(patsubst ${dira}/rpr%.dat,${dirf}/xcm%.png,$(RPR))
+
 
 RTP    = $(patsubst ${dird}/unf%.dat,${dira}/rtp%.dat,$(BIN))
 DENTPNG= $(patsubst ${dira}/rtp%.dat,${dirf}/dnt%.png,$(RTP))
 #VELTPNG= $(patsubst ${dira}/rtp%.dat,${dirf}/vel%.png,$(RTP))
 #PRETPNG= $(patsubst ${dira}/rtp%.dat,${dirf}/pre%.png,$(RTP))
+XCTTPNG= $(patsubst ${dira}/rtp%.dat,${dirf}/xct%.png,$(RTP))
+
 
 # intgrated values 
 TOT   = $(patsubst ${dird}/unf%.dat,${dira}/tot%.dat,$(BIN))
@@ -64,8 +68,11 @@ TOT   = $(patsubst ${dird}/unf%.dat,${dira}/tot%.dat,$(BIN))
 denmovie=${dirm}/aniden.mp4
 velmovie=${dirm}/anivel.mp4
 premovie=${dirm}/anipre.mp4
+xcmmovie=${dirm}/anixcm.mp4
+
 
 dntmovie=${dirm}/anidnt.mp4
+xctmovie=${dirm}/anixct.mp4
 
 movies = ${denmovie} ${velmovie} ${premovie} ${dntmovie}
 ##########################################
@@ -109,8 +116,14 @@ ${velmovie}: MakeMovie.sh ${VELPNG}
 ${premovie}: MakeMovie.sh ${PREPNG}
 	./MakeMovie.sh pre
 
+${xcmmovie}: MakeMovie.sh ${XCMPNG}
+	./MakeMovie.sh xcm
+
 ${dntmovie}: MakeMovie.sh ${DENTPNG}
 	./MakeMovie.sh dnt
+
+${xctmovie}: MakeMovie.sh ${XCTTPNG}
+	./MakeMovie.sh xct
 
 #################
 # gnuplot
@@ -126,6 +139,9 @@ ${PREPNG}: MakeSnap.sh radpro.plt ${RPR}
 	./MakeSnap.sh rpr radpro.plt
 
 ${DENTPNG}: MakeSnap.sh rttpro.plt ${RPR}
+	./MakeSnap.sh rtp rttpro.plt
+
+${XCMTPNG}: MakeSnap.sh rttpro.plt ${RPR}
 	./MakeSnap.sh rtp rttpro.plt
 
 
