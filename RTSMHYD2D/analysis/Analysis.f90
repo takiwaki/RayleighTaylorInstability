@@ -121,6 +121,7 @@ subroutine Visualize2D
   open(unit2D,file=filename,status='replace',form='formatted')
 
   write(unit2D,'(1a,4(1x,E12.3))') "#",time
+  write(unit2D,'(1a,2(1x,i5))') "#",ie-is+1,je-js+1
   write(unit2D,'(1a,4(1x,a8))') "#","1:x    ","2:y     ","3:den "
   do j=js,je
   do i=is,ie
