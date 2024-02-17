@@ -1,4 +1,5 @@
 #!/bin/bash
+#PBS -N RT-multi
 #PBS -q small
 #PBS -m n
 #PBS -l nodes=1:ppn=1
