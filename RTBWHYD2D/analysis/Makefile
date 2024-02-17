@@ -64,13 +64,13 @@ TOT   = $(patsubst ${dird}/unf%.dat,${dira}/tot%.dat,$(BIN))
 # Movies
 ##########################################
 
-denonemovie=${dirm}/aniden_one.mp4
-velonemovie=${dirm}/anivel_one.mp4
-preonemovie=${dirm}/anipre_one.mp4
-xcmonemovie=${dirm}/anixcm_one.mp4
+denonemovie=${dirm}/anidenone.mp4
+velonemovie=${dirm}/anivelone.mp4
+preonemovie=${dirm}/anipreone.mp4
+xcmonemovie=${dirm}/anixcmone.mp4
 
-dentwomovie=${dirm}/aniden_two.mp4
-xcmtwomovie=${dirm}/anixcm_two.mp4
+dentwomovie=${dirm}/anidentwo.mp4
+xcmtwomovie=${dirm}/anixcmtwo.mp4
 
 movies = ${denonemovie} ${velonemovie} ${preonemovie} ${xcmonemovie} ${dentwomovie} ${xcmtwomovie}
 ##########################################
@@ -93,8 +93,8 @@ all: build movie timeevolution
 .PHONY: timeevolution
 timeevolution: ${timefile} ## time evolution 
 
-${timefile}: t-E.plt t-prof.dat
-	gnuplot t-E.plt
+${timefile}: PlotTime.plt t-prof.dat
+	gnuplot PlotTime.plt
 
 t-prof.dat: MakeTimeseq.sh ${TOT}
 	./MakeTimeseq.sh
@@ -153,7 +153,7 @@ ${XCMTWOPNG}: MakeSnap.sh Plot2D.plt ${TWOPRO}
 #################
 run: ${ONEPRO} ${TWOPRO} ## run the analysis
 
-count-number: ${countfile}
+count-number: ${countfile} ## count bin files to prepare the analysis
 
 ${countfile}: CountBindata.sh
 	./CountBindata.sh
@@ -184,8 +184,8 @@ clean: ## Delete intermediate files to compile
 	rm -f  ${ana} *.o *.mod *~
 
 allclean: ## Delete data
-	rm -fr ${dirm} ${dirf}  ${dira} ${countfile}
+	rm -fr ${dirm} ${dirf}  ${dira} ${countfile} t-prof.dat
 
 .PHONY: help
 help: ## Display this help screen
-	@grep -E '^[a-zA-Z_-]+:.*?## .*$$' $(MAKEFILE_LIST) | awk 'BEGIN {FS = ":.*?## "}; {printf "\033[36m%-20s\033[0m %s\n", $$1, $$2}'
+	@grep -E '^[0-9a-zA-Z_-]+:.*?## .*$$' $(MAKEFILE_LIST) | awk 'BEGIN {FS = ":.*?## "}; {printf "\033[36m%-20s\033[0m %s\n", $$1, $$2}'
