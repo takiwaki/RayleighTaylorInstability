@@ -1,5 +1,5 @@
 #!/bin/bash
-#PBS -N Blastwave
+#PBS -N BlastwaveRT
 #PBS -q small
 #PBS -m n
 #PBS -l nodes=1:ppn=1

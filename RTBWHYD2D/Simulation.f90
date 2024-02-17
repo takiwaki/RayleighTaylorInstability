@@ -37,7 +37,7 @@
      &                  ,ke=1
 
 
-      real(8),parameter:: x1min=1.0d8,x1max=5.0d10,dx1min=1.0d7 ! cm
+      real(8),parameter:: x1min=1.0d8,x1max=2.0d10,dx1min=1.0d7 ! cm
       real(8),dimension(in)::x1a,x1b,dvl1a
 
       real(8),parameter:: x2min=0.0d0,x2max=acos(-1.0)
@@ -120,7 +120,7 @@
       implicit none
       real(8)::dx,dy
       integer::i,j,k
-      logical,parameter:: logMesh=.false.
+      logical,parameter:: logMesh=.true.
       
       integer:: iter,nbl
       real(8):: x1r,fn,dfndx1r,deltx1r,errx1r
@@ -221,19 +221,18 @@
       preexp = Eexp/(volexp)*(gam-1.0d0) ! [erg/cm^-3]
       velexp = sqrt(0.2d51/volexp/rhoexp)! [cm/s]
 
-      slope = 0.0d0
-      Rshell(2) = 3.0d9  ! CO core
-      Rshell(3) = 3.0d10 ! He core
+      slope = 1.0d0
+      Rshell(2) = 0.6d9  ! CO core
+      Rshell(3) = 1.0d10 ! He core
       Rshell(4) = x1max  ! ounter boundary
-      rho(1) = rhoexp ! steller density at r~2e8 g/cm^3   ! CO<-|
-!      rho(1) = 1.0d7 ! steller density at r~2e8 g/cm^3   ! CO<-|
+      rho(1) = 1.0d7 ! steller density at r~2e8 g/cm^3   ! CO<-|
       rho(2) = 1.0e-2*rho(1)*(Rshell(2)/Rshell(1))**(-slope) ! CO  |-> He
-      rho(3) = 1.0e0*rho(2)*(Rshell(3)/Rshell(2))**(-slope) ! He  |-> H
+      rho(3) = 1.0e-1*rho(2)*(Rshell(3)/Rshell(2))**(-slope) ! He  |-> H
       rho(4) =        rho(3)*(Rshell(4)/Rshell(3))**(-slope)
       pre(1) = 1.0d16*rho(1) ! steller pressure at r~2e8 g/cm^3
-      pre(2) = 1.0d15*rho(2)       
-      pre(3) = 1.0d15*rho(3)
-      pre(4) = 1.0d15*rho(4)
+      pre(2) = pre(1)       
+      pre(3) = pre(2)
+      pre(4) = pre(3)
       
       d(:,:,:) = rho(4)
       Xcomp(1:ncomp,:,:,:) = 1.0d-10

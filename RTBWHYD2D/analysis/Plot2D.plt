@@ -146,6 +146,9 @@ set cbtics offset 0,3.2
 #cmax=5
 #set cbrange [cmin:cmax]
 
+set palette define (-1.0 "blue", 0.0 "white", 1.0 "red")
+set cbrange [-0.3:0.3]
+
 set title "{/Symbol d}Density"
 
 # Main plot

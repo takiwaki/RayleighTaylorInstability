@@ -1,6 +1,5 @@
-
 ##########################################
-# Makefile for Turbulence Studies
+# Makefile for Blastwave Analysis
 ##########################################
 
 ##########################################
@@ -86,7 +85,7 @@ timefile=t-E.png
 
 all: build movie timeevolution
 
-.PHONY: all clean allclean
+.PHONY: all
 
 ##########################################
 # Time evolution
@@ -127,8 +126,8 @@ ${xcmtwomovie}: MakeMovie.sh ${XCMTWOPNG}
 #################
 # gnuplot
 #################
-.PHONY: onedim
-onedim: ${DENONEPNG} ${VELONEPNG} ${PREONEPNG} ${XCMONEPNG}  ## Make one-dimentional plot
+.PHONY: 1Dsnaps
+1Dsnaps: ${DENONEPNG} ${VELONEPNG} ${PREONEPNG} ${XCMONEPNG}  ## Make one-dimentional plot
 
 ${DENONEPNG}: MakeSnap.sh Plot1D.plt ${ONEPRO}
 	./MakeSnap.sh onepro Plot1D.plt
@@ -139,8 +138,8 @@ ${VELONEPNG}: MakeSnap.sh Plot1D.plt ${ONEPRO}
 ${PREONEPNG}: MakeSnap.sh Plot1D.plt ${ONEPRO}
 	./MakeSnap.sh onepro Plot1D.plt
 
-.PHONY: twodim
-twodim: ${DENTWOPNG} ${XCMTWOPNG}  ## Make two-dimentional plot
+.PHONY: 2Dsnaps
+2Dsnaps: ${DENTWOPNG} ${XCMTWOPNG}  ## Make two-dimentional plot
 
 ${DENTWOPNG}: MakeSnap.sh Plot2D.plt ${TWOPRO}
 	./MakeSnap.sh twopro Plot2D.plt
@@ -180,6 +179,7 @@ ${ana}: Analysis.f90
 #################
 # clean up
 #################
+.PHONY: clean allclean
 clean: ## Delete intermediate files to compile
 	rm -f  ${ana} *.o *.mod *~
 
