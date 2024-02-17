@@ -11,7 +11,7 @@ dir_path = "./output/"
 def Main():
     global dir_path
     files=GetFileList()
-#    files = dir_path + "rpr00050.dat"
+#    files = dir_path + "onepro00050.dat"
 
     is_initial = True
     for file in files:
@@ -35,7 +35,7 @@ def Main():
 
 def GetFileList():
     global dir_path
-    filenames= dir_path+"rpr*.dat"
+    filenames= dir_path+"onepro*.dat"
     files = glob.glob(filenames)
     files = sorted(files)
     return files
@@ -55,7 +55,7 @@ def ReadData(file):
     except IOError:
         print(" cannot open " + input )
         sys.exit()
-    rad, rho, pre, vel =  np.split(results,4,1)
+    rad, Mr, rho, pre, vel, XNi, XCO, XHe, XH = np.split(results,9,1)
     
     return t, rad, rho
 
@@ -82,12 +82,12 @@ def PlotSpaceTimeData(Xtd,Ytd,Ztd,timemin,timemax):
   ax4 = figB.add_subplot(1,1,1)
   cDen = make_colormap({0.:'#ff0000',1.0:'#00ff00',2:'#0000ff',3:'#000000'})
   tpc=ax4.pcolormesh(Xtd, Ytd,Ztd,cmap=cDen,norm=colors.LogNorm(vmin=Ztd.min(), vmax=Ztd.max()))
-  ax4.set_title(r"$\rho\ [{\rm 1/cm^2}]$", fontsize=fsizeforlabel)
-  ax4.set_ylabel(r"$r\ [{\rm pc}]$", fontsize=fsizeforlabel)
-  ax4.set_xlabel(r"$t\ [{\rm year}]$", fontsize=fsizeforlabel)
+  ax4.set_title(r"$\rho\ [{\rm g/cm^2}]$", fontsize=fsizeforlabel)
+  ax4.set_ylabel(r"$r\ [{\rm cm}]$", fontsize=fsizeforlabel)
+  ax4.set_xlabel(r"$t\ [{\rm s}]$", fontsize=fsizeforlabel)
   figB.colorbar(tpc)
   ax4.set_xlim(timemin,timemax)
-  ax4.set_ylim(0,9)
+#  ax4.set_ylim(0,9)
 #  anat = np.linspace(0.0, 0.4, 100)
 #  anar = anat**(2/5)
 #  ax4.plot(anat,anar, label="analytic" ,color='white', linewidth=4)

@@ -70,7 +70,7 @@ def PlotTimeEexp(time,Eexp):
   fig1 = plt.figure(figsize=(6,4.5))
   ax1 = fig1.add_subplot(1,1,1)
   ax1.plot(time,Eexp,linewidth=2)
-  ax1.set_xlabel(r"$t\ [{\rm year}]$", fontsize=fsizeforlabel)
+  ax1.set_xlabel(r"$t\ [{\rm s}]$", fontsize=fsizeforlabel)
   ax1.set_ylabel(r"$E_{\rm exp}\ [{\rm erg}]$", fontsize=fsizeforlabel)
   fig1.tight_layout()
   print("output"+outputfile)

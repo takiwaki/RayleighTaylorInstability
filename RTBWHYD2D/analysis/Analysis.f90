@@ -277,6 +277,8 @@ subroutine Visualize2D
   write(unit2D,'(1a11,1(1x,E12.3))') "#  time_sc=",time
   write(unit2D,'(1a11,1(1x,E12.3))') "#  rad_max=",x1a(ie+1)
   write(unit2D,'(1a11,1(1x,E12.3))') "#  r_shock=",r_shock_max
+  write(unit2D,'(1a,2(1x,a7,i0))') "#"," Nrad= ",ie-is+1," Nthe= ",je-js+2
+
 !                                     1234567890123   1234567890123   1234567890123    1234567890123   1234567890123   1234567890123
   write(unit2D,'(1a,10(1x,a13))') "#","1:r[Rs]      ","2:theta[rad] ","3:den[g/cm^3] ","4:p[erg/cm3] " &
                                &    ,"5:vel[cm/s]  ","6:dden       " &

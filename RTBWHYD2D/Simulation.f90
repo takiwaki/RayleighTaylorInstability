@@ -230,9 +230,9 @@
       rho(3) = 1.0e-1*rho(2)*(Rshell(3)/Rshell(2))**(-slope) ! He  |-> H
       rho(4) =        rho(3)*(Rshell(4)/Rshell(3))**(-slope)
       pre(1) = 1.0d16*rho(1) ! steller pressure at r~2e8 g/cm^3
-      pre(2) = pre(1)       
-      pre(3) = pre(2)
-      pre(4) = pre(3)
+      pre(2) = pre(1)*(Rshell(2)/Rshell(1))**(-slope)
+      pre(3) = pre(2)*(Rshell(3)/Rshell(2))**(-slope)
+      pre(4) = pre(3)*(Rshell(4)/Rshell(3))**(-slope)
       
       d(:,:,:) = rho(4)
       Xcomp(1:ncomp,:,:,:) = 1.0d-10
