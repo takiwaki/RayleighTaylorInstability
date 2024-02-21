@@ -12,7 +12,7 @@ This is the instruction for spring school of division of science. First login th
 Then copy the source code.
 
     cd /cfca-work/<your account>
-    cp -r /cfca-work/dos00/RayleighTaylorInstability .
+    cp -r /cfca-work/dos04/RayleighTaylorInstability .
 To run the code, you need to compile `Simulation.f90`.
     
     cd RayleighTaylorInstability/RTBWHYD2D/
