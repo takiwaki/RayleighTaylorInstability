@@ -11,7 +11,7 @@ ana=Analysis.x
 ######################	
 # complile options
 ######################
-fc=ifort -extend-source
+fc=ifort
 #fopt=-g -traceback -O2
 fopt=-g -traceback -check all -fpe0
 
