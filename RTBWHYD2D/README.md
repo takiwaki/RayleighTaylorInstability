@@ -2,24 +2,42 @@
 
 [Go to top](../README.md)  
 
-## How to run
+## How to run and analyse
 
-### compile 
-This is the instruction for spring school of division of science. First login the server, more.
+This is the instruction for spring school of division of science.
+
+### login and go to work directory 
+First login the server, `more.cfca.nao.ac.jp`.
 
     ssh <your account>@more.cfca.nao.ac.jp
     
-Then copy the source code.
+Then, go to work directory. Make it if that does not exist.
 
+    mkdir /cfca-work/<your account>
     cd /cfca-work/<your account>
+
+Copy the programs.　If you did not do it before. 
+    
     cp -r /cfca-work/dos04/RayleighTaylorInstability .
+    
+Keep the original program as it is.
+    
+    cd RayleighTaylorInstability/
+    mv RTBWHYD2D RTBWHYD2D_original
+   
+### Making your model 
+Start the simulation by copying the original file. You can name the directory as you like. `_model1` is an example.
+    
+    cp -r RTBWHYD2D_original RTBWHYD2D_model1
+    cd RTBWHYD2D_model1
+
+### compile 
 To run the code, you need to compile `Simulation.f90`.
     
-    cd RayleighTaylorInstability/RTBWHYD2D/
     module load intel/2022
     make build
     
-Then `Simulation.x`is made in this directory. You can know the command by `make help`.
+Then `Simulation.x`is made in this directory. `make Simulation.x` also works. You can know the command by `make help`.
 
 ### run
 Let's run the code.
@@ -27,12 +45,17 @@ Let's run the code.
     qsub pbs_more.sh
     
 The simulation data is saved in `bindata/`.
-
+    
+    ls bindata/
+    
 ### analysis
-GO to analysis server. Here ?? below is 09-14. To analyze the data, let us make `Analysis.x`.
+Open another terminal and go to analysis server, `an??.cfca.nao.ac.jp`. Here ?? is 09-14. To analyze the data, let us make `Analysis.x`.
     
     ssh <your account>@an??.cfca.nao.ac.jp
-    cd /cfca-work/<your account>/RayleighTaylorInstability/RTBWHYD2D/analysis .
+    
+Then go to the work directory. Change `_model1` to the name you used.
+
+    cd /cfca-work/<your account>/RayleighTaylorInstability/RTBWHYD2D_models/analysis .
     make Analysis.x
     
 Now you have many time-snapshots of data. To count it, use a script.
@@ -71,3 +94,4 @@ To do all in one command, you just type `make` or `make all`.
    
       make all
       
+If you want th delete all the analysis, type `make allclean`
