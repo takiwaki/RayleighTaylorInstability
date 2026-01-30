@@ -96,9 +96,6 @@ timeevolution: ${timefile} ## time evolution
 ${timefile}: PlotTime.plt t-prof.dat
 	gnuplot PlotTime.plt
 
-t-prof.dat: MakeTimeseq.sh ${TOT}
-	./MakeTimeseq.sh
-
 #################
 # ffmpeg
 #################
@@ -164,7 +161,7 @@ ${ONEPRO}: ${ana} ${BIN} ${countfile}
 ${TWOPRO}: ${ana} ${BIN} ${countfile}
 	./${ana}
 
-${TOT}: ${ana} ${BIN} ${countfile}
+t-prof.dat: ${ana} ${BIN} ${countfile}
 	./${ana}
 
 #################

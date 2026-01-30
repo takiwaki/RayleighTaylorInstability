@@ -62,7 +62,7 @@ program data_analysis
      call Visualize1D
      call DetectShock
      call Visualize2D
-     call Integration
+     call TimeProfile
   enddo FILENUMBER
 
   stop
@@ -366,15 +366,15 @@ subroutine Visualize1D
   return
 end subroutine Visualize1D
 
-subroutine Integration
+subroutine TimeProfile
   use unitsmod
   use fieldmod
   implicit none
   integer::i,j,k
 
-  character(20),parameter::dirname="output/"
+  character(20),parameter::dirname="./"
   character(40)::filename
-  integer,parameter::unittot=1234
+  integer,save::unittpr
   real(8)::Etot,pi
 
   logical,save:: is_inited
@@ -382,7 +382,6 @@ subroutine Integration
 
   if(.not. is_inited)then
      call makedirs(dirname)
-     is_inited = .true.
   endif
 
   pi = acos(-1.0d0)
@@ -391,23 +390,28 @@ subroutine Integration
   k=ks
   do j=js,je
   do i=is,ie
-     Etot = Etot + (0.5d0*d(i,j,k)*v1(i,j,k)**2+ei(i,j,k))*dvl1a(i)*dvl2a(j)*2.0d0*pi
+     Etot = Etot + (0.5d0*d(i,j,k)*(v1(i,j,k)**2+v2(i,j,k)**2)+ei(i,j,k))*dvl1a(i)*dvl2a(j)*2.0d0*pi
   enddo
   enddo
 
-  write(filename,'(a3,i5.5,a4)')"tot",incr,".dat"
-  filename = trim(dirname)//filename
-  open(unittot,file=filename,status='replace',form='formatted')
+  if(.not. is_inited) then
+     write(filename,'(A)')"t-prof.dat"
+     filename = trim(dirname)//filename
+     print *,"time evolution is written in", filename
+     open(newunit=unittpr,file=filename,status='replace',form='formatted')
+  endif
+  
 
-!  write(unittot,'(1a,4(1x,E12.3))') "#",time/year
+!  write(unittpr,'(1a,4(1x,E12.3))') "#",time/year
 !                                    12345678   1234567890123     1234567890123   123456789012
-!  write(unittot,'(1a,4(1x,a13))') "#","1:r[pc] ","2:den[1/cm^3] ","3:p[erg/cm3] ","4:vel[km/s] "
+!  write(unittpr,'(1a,4(1x,a13))') "#","1:r[pc] ","2:den[1/cm^3] ","3:p[erg/cm3] ","4:vel[km/s] "
 
-  write(unittot,'(1x,4(1x,E13.3))') time/day,Etot
-  close(unittot)
+  write(unittpr,'(1x,4(1x,E13.3))') time/day,Etot
+  
+  is_inited = .true.
 
   return
-end subroutine  Integration
+end subroutine TimeProfile
 
 subroutine makedirs(outdir)
   implicit none
