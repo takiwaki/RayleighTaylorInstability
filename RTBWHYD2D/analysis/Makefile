@@ -56,9 +56,7 @@ DENTWOPNG = $(patsubst ${dira}/twopro%.dat,${dirf}/dentwo%.png,$(TWOPRO))
 #PRETWOPNG = $(patsubst ${dira}/rtp%.dat,${dirf}/pre%.png,$(TWOPRO))
 XCMTWOPNG = $(patsubst ${dira}/twopro%.dat,${dirf}/xcmtwo%.png,$(TWOPRO))
 
-
-# intgrated values 
-TOT   = $(patsubst ${dird}/unf%.dat,${dira}/tot%.dat,$(BIN))
+.PRECIOUS: ${ONEPRO}
 
 ##########################################
 # Movies

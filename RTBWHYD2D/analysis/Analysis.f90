@@ -62,6 +62,7 @@ program data_analysis
      call Visualize1D
      call DetectShock
      call Visualize2D
+     call VelocityDistibution
      call TimeProfile
   enddo FILENUMBER
 
@@ -412,6 +413,10 @@ subroutine TimeProfile
 
   return
 end subroutine TimeProfile
+
+subroutine VelocityDistibution
+  implicit none
+end subroutine VelocityDistibution
 
 subroutine makedirs(outdir)
   implicit none
