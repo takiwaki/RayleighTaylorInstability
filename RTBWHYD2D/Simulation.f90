@@ -11,6 +11,7 @@
       real(8),parameter::   kbol = 1.380649d-23     ! J/K
       real(8),parameter::   year = 365.0d0*24*60*60 ! sec
       real(8),parameter::    day = 24*60*60 ! sec
+      real(8),parameter::  Ggrav = 6.67430d-8 ! g^-1 cm^3 s^-2  
 
       end module unitsmod
 
@@ -34,7 +35,7 @@
       data tout / 0.0d0 /
       
       integer,parameter::izones=200 !! Number of active radial zones (excluding ghost zones)
-      integer,parameter::jzones=100
+      integer,parameter::jzones=5
       integer,parameter::mgn=2      !! Number of ghost cells on each boundary
       integer,parameter::in=izones+2*mgn+1 &
      &                  ,jn=jzones+2*mgn+1 &
@@ -65,7 +66,7 @@
       integer,parameter::ncomp=4 ! composition
       real(8),dimension(ncomp,in,jn,kn):: DXcomp
       real(8),dimension(ncomp,in,jn,kn)::  Xcomp
-      
+      integer,parameter:: nFe=1,nCO=2,nHe=3,nH=4
       end module commons
      
 !=======================================================================
@@ -113,7 +114,7 @@
       program main
       use commons
       implicit none
-      integer,parameter:: nhyspan=10
+      integer,parameter:: nhyspan=100
       call print_omp_threads
       write(6,*) "setup grids and fields"
       call GenerateGrid
@@ -126,7 +127,9 @@
       mloop: do nhy=1,nhymax
          call TimestepControl
          if(mod(nhy,nhyspan) .eq. 0 ) write(6,*)nhy,time,dt
+         call GravPotential
          call BoundaryCondition
+         call GravForce
          call CheckShock
          call StateVector
          call NumericalFlux1
@@ -137,7 +140,7 @@
          if(time .ge. tout+dtout) call Output
          if(time > timemax) exit mloop
       enddo mloop
-
+      call Output
       write(6,*) "program has been finished"
       end program main
 
@@ -257,90 +260,68 @@
       implicit none
       integer::i,j,k
       real(8):: ein0
-      real(8),dimension(ncomp):: Rshell,rho,pre,Mshell,Eshell
-      real(8):: rhoexp,preexp,velexp,volexp,Mexp,Eexp
+      real(8):: rhoexp,preexp,velexp,volexp,Mexp,Eexp,Rexp
       real(8):: pi
      
       integer,dimension(2) :: seed
       real(8),dimension(1) :: rnum
       real(8),parameter :: rrv =1.0d-1      
-      real(8):: slope
+      real(8):: slope(ncomp)
       pi =acos(-1.0d0)
-    
-! Explosion occurs in the center
-      Rshell(1) = 2.0d8 ! 2000km
+
+      !call GravPotential
+      !call GravForce
+      
+      !p(:,:,:) = d(:,:,:) * 1.0d17
+      ! Hydrostatic
+      do k=ks,ke
+      do j=js,je
+      do i=is,ie+2
+      !   p(i,j,k) = p(i-1,j,k) + sqrt(d(i,j,k)*d(i-1,j,k))*(gp(i,j,k)-gp(i-1,j,k))
+      enddo
+      !do i=is-2,ie+2
+       !  print *,d(i,j,k),p(i,j,k),d(i,j,k)*gp(i,j,k)
+      !enddo
+!      stop
+      enddo
+      enddo
+
+      call MakeProgenitor
+
+      ! Explosion occurs in the center
+      Rexp   = 1.5d8 ! 2000km
       Mexp   = 1.0d0  ! [M_s]
       Eexp   = 0.8d51 ! [erg]
-      volexp = (4.0*pi/3.0d0*Rshell(1)**3-4.0*pi/3.0d0*x1min**3) ! [cm^-3]
+      volexp = 4.0*pi/3.0d0*(Rexp**3 - x1min**3) ! [cm^3]
       rhoexp = (Mexp*Msolar)/volexp      ! [g/cm^-3]
       preexp = Eexp/(volexp)*(gam-1.0d0) ! [erg/cm^-3]
       velexp = sqrt(0.2d51/volexp/rhoexp)! [cm/s]
-
-      slope = 1.0d0
-      Rshell(2) = 0.6d9  ! CO core
-      Rshell(3) = 1.0d10 ! He core
-      Rshell(4) = x1max  ! ounter boundary
-      rho(1) = 1.0d7 ! steller density at r~2e8 g/cm^3   ! CO<-|
-      rho(2) = 1.0e-2*rho(1)*(Rshell(2)/Rshell(1))**(-slope) ! CO  |-> He
-      rho(3) = 1.0e-1*rho(2)*(Rshell(3)/Rshell(2))**(-slope) ! He  |-> H
-      rho(4) =        rho(3)*(Rshell(4)/Rshell(3))**(-slope)
-      pre(1) = 1.0d16*rho(1) ! steller pressure at r~2e8 g/cm^3
-      pre(2) = pre(1)*(Rshell(2)/Rshell(1))**(-slope)
-      pre(3) = pre(2)*(Rshell(3)/Rshell(2))**(-slope)
-      pre(4) = pre(3)*(Rshell(4)/Rshell(3))**(-slope)
       
-      d(:,:,:) = rho(4)
-      Xcomp(1:ncomp,:,:,:) = 1.0d-10
       
+! Explosion
       do k=ks,ke
       do j=js,je
-      do i=is,ie
-         if(x1b(i) < Rshell(1))then
-             d(i,j,k) = rhoexp
-             p(i,j,k) = preexp
-             v1(i,j,k) = velexp*(x1b(i)/Rshell(1))
-             Xcomp(1,i,j,k) = 1.0d0 ! Ni
-             Eshell(1) = Eshell(1)  &
-   &  +(0.5*d(i,j,k)*v1(i,j,k)**2+p(i,j,k)/(gam-1.0d0))*dvl1a(i)*dvl2a(j)*2.0d0*pi
-             Mshell(1) = Mshell(1)+            d(i,j,k)*dvl1a(i)*dvl2a(j)*2.0d0*pi
-         else if(x1b(i) < Rshell(2))then ! CO core
-             ! x1b(i) > Rshell(1)
-             d(i,j,k) = rho(1)*(x1b(i)/Rshell(1))**(-slope)
-             p(i,j,k) = pre(1)*(x1b(i)/Rshell(1))**(-slope)
-             v1(i,j,k) = 0.0d0
-             Xcomp(2,i,j,k) = 1.0d0
-             Mshell(2) = Mshell(2)+ d(i,j,k)*dvl1a(i)*dvl2a(j)*2.0d0*pi
-         else if(x1b(i) < Rshell(3))then ! He core
-             ! x1b(i) > Rshell(2)
-             d(i,j,k) = rho(2)*(x1b(i)/Rshell(2))**(-slope)
-             p(i,j,k) = pre(2)*(x1b(i)/Rshell(2))**(-slope)
-             v1(i,j,k) = 0.0d0
-             Xcomp(3,i,j,k) = 1.0d0
-             Mshell(3) = Mshell(3)+ d(i,j,k)*dvl1a(i)*dvl2a(j)*2.0d0*pi
-         else ! Hydrogen envelope
-             ! x1b(i) > Rshell(3)
-             d(i,j,k) = rho(3)*(x1b(i)/Rshell(3))**(-slope)
-             p(i,j,k) = pre(3)*(x1b(i)/Rshell(3))**(-slope)
-             v1(i,j,k) = 0.0d0
-             Xcomp(4,i,j,k) = 1.0d0
-             Mshell(4) = Mshell(4)+ d(i,j,k)*dvl1a(i)*dvl2a(j)*2.0d0*pi
+      do i=is,ie+mgn
+         if(x1b(i) < Rexp)then
+            !print *,p(i,j,k),preexp
+             d(i,j,k) = d(i,j,k) + rhoexp
+             p(i,j,k) = p(i,j,k) + preexp
+             v1(i,j,k) = velexp*(x1b(i)/Rexp)
+             Xcomp(nFe,i,j,k) = 1.0d0 ! Ni
+             !stop
           endif
       enddo
       enddo
       enddo
-      
+
+ 
       v2(:,:,:) = 0.0d0
       v3(:,:,:) = 0.0d0
       
-      write(6,*) "Exploding Regin [cm]",Rshell(1)
-      write(6,*) "Eex= ",Eshell(1)/1.0d51,"[10^51 erg]"
-      write(6,*) "Mexp=",Mshell(1)/Msolar,"[M_s]"
-      write(6,*) "CO core Radius [cm]",Rshell(2)
-      write(6,*) "M_CO= ",Mshell(2)/Msolar,"[M_s]"
-      write(6,*) "He core Radius [cm]",Rshell(3)
-      write(6,*) "M_He= ",Mshell(3)/Msolar,"[M_s]"
-      write(6,*) "Outer boundary [cm]",x1max
-      write(6,*) "M_env=",Mshell(4)/Msolar,"[M_s]"
+      write(6,*) "Exploding Regin [cm]",Rexp
+!      write(6,*) "Eex= ",Eshell(1)/1.0d51,"[10^51 erg]"
+!      write(6,*) "Mexp=",Mshell(1)/Msolar,"[M_s]"
+      
       
       write(6,*) rrv*100.0d0 &
      & , "% of Randam Perturbation imposed on density"
@@ -352,7 +333,7 @@
       do j=js,je
       do i=is,ie
          call random_number(rnum)
-            d(i,j,k) = d(i,j,k)*(1.0d0+rrv*2.0d0*(rnum(1)-0.5d0))
+ !           d(i,j,k) = d(i,j,k)*(1.0d0+rrv*2.0d0*(rnum(1)-0.5d0))
       enddo
       enddo
       enddo
@@ -371,6 +352,85 @@
 
       return
       end subroutine GenerateProblem
+    
+      subroutine MakeProgenitor  
+      use commons
+      use eosmod
+      implicit none
+      integer::i,j,k
+      real(8),dimension(ncomp):: Rshell,rho,pre,Mshell,slope
+      real(8)::pi
+      pi = acos(-1.0d0)
+      
+      Rshell(nFe) = 2.0d8  ! positon of Fe core [cm]
+      Rshell(nCO) = 6.0d8  ! positon of CO core [cm]
+      Rshell(nHe) = 12.0d8 ! positon of He core [cm]
+      Rshell(nH ) = x1max  ! positon of stellar surface
+      
+      slope(nFe) = 0.0d0 ! density slope in Fe core 
+      slope(nCo) = 1.0d0 ! density slope in CO core 
+      slope(nHe) = 1.0d0 ! density slope in He core 
+      slope(nH)  = 1.0d0 ! density slope in H envelope 
+      
+      rho(nFe) = 1.5d6 ! density near the positon of  iron core
+      rho(nCo) = 1.0d-1*rho(nFe)*(Rshell(nCO)/Rshell(nFe))**(-slope(nFe)) ! CO  |-> He
+      rho(nHe) = 1.0d-1*rho(nCo)*(Rshell(nHe)/Rshell(nCO))**(-slope(nCO)) ! CO  |-> He
+      rho(nH ) = 1.0d-1*rho(nHe)*(Rshell(nH )/Rshell(nHe))**(-slope(nHe)) ! CO  |-> He
+     
+      d(:,:,:) = rho(nH )
+      Xcomp(1:ncomp,:,:,:) = 1.0d-10
+      
+      do k=ks,ke
+      do j=js,je
+      do i=is-mgn,ie+mgn
+         if(x1b(i) < Rshell(nFe))then ! Fe core
+             ! x1b(i) > Rshell(1)
+             d(i,j,k) = rho(nFe)*(x1b(i)/Rshell(nFe))**(-slope(nFe))
+             p(i,j,k) = 1.0d18*d(i,j,k)
+             v1(i,j,k) = 0.0d0
+             Xcomp(nFe,i,j,k) = 1.0d0 ! Fe
+         else if(x1b(i) < Rshell(nCO))then ! CO core
+             ! x1b(i) > Rshell(1)
+             d(i,j,k) = rho(nCO)*(x1b(i)/Rshell(nCO))**(-slope(nCO))
+             p(i,j,k) = 0.5d18*d(i,j,k)
+             v1(i,j,k) = 0.0d0
+             Xcomp(nCO,i,j,k) = 1.0d0
+         else if(x1b(i) < Rshell(nHe))then ! He core
+             ! x1b(i) > Rshell(2)
+             d(i,j,k) = rho(nHe)*(x1b(i)/Rshell(nHe))**(-slope(nHe))
+             p(i,j,k) = 1.0d17*d(i,j,k)
+             v1(i,j,k) = 0.0d0
+             Xcomp(3,i,j,k) = 1.0d0
+         else ! Hydrogen envelope
+             ! x1b(i) > Rshell(3)
+             d(i,j,k) = rho(nH )*(x1b(i)/Rshell(nH ))**(-slope(nH ))
+             p(i,j,k) = 1.0d16*d(i,j,k)
+             v1(i,j,k) = 0.0d0
+             Xcomp(nH ,i,j,k) = 1.0d0
+          endif
+      enddo
+      enddo
+      enddo
+   
+      Mshell(1:ncomp) = 0.0d0
+      do k=ks,ke
+      do j=js,je
+      do i=is,ie+2
+             Mshell(1:ncomp) = Mshell(1:ncomp)+Xcomp(1:ncomp,i,j,k)*d(i,j,k)*dvl1a(i)*dvl2a(j)*2.0d0*pi
+      enddo
+      enddo
+      enddo
+   
+      write(6,*) "Fe core Radius [cm]",Rshell(nFe)
+      write(6,*) "M_Fe= ",Mshell(nFe)/Msolar,"[M_s]"
+      write(6,*) "CO core Radius [cm]",Rshell(nCO)
+      write(6,*) "M_CO= ",Mshell(nCO)/Msolar,"[M_s]"
+      write(6,*) "He core Radius [cm]",Rshell(nHe)
+      write(6,*) "M_He= ",Mshell(nHe)/Msolar,"[M_s]"
+      write(6,*) "Outer boundary [cm]",x1max
+      write(6,*) "M_env=",Mshell(nH )/Msolar,"[M_s]"
+    
+      end subroutine MakeProgenitor
 
 
 !=======================================================================
@@ -392,7 +452,7 @@
           v1(is-i,j,k) =  v1(is+i-1,j,k)
           v2(is-i,j,k) =  v2(is+i-1,j,k)
           v3(is-i,j,k) =  v3(is+i-1,j,k)
-          gp(is-i,j,k) =  gp(is+i-1,j,k)
+          gp(is-i,j,k) =  gp(is,j,k) * x1b(is)/x1b(is-i)
           
           Xcomp(1:ncomp,is-i,j,k) = Xcomp(1:ncomp,is+i-1,j,k)
       enddo
@@ -409,7 +469,7 @@
           v1(ie+i,j,k) =  v1(itmp,j,k)
           v2(ie+i,j,k) =  v2(itmp,j,k)
           v3(ie+i,j,k) =  v3(itmp,j,k)
-          gp(ie+i,j,k) =  gp(itmp,j,k)
+          gp(ie+i,j,k) =  gp(itmp,j,k)* x1b(itmp)/x1b(ie+1)
           
           Xcomp(1:ncomp,ie+i,j,k) = Xcomp(1:ncomp,itmp,j,k)
       enddo
@@ -1262,6 +1322,64 @@
       return
       end subroutine HLLC
 
+      subroutine GravPotential
+        use commons
+        use fluxmod
+        implicit none
+        integer :: i,j,k
+        real(8),dimension(in)::mass
+        real(8):: dm
+        real(8):: gps
+        real(8):: pi
+        logical,save:: is_inited
+        data is_inited / .false. /
+
+        pi = acos(-1.0d0)
+        
+        mass(is) =  0.0*Msolar
+        
+        do k=ks,ke
+        do j=js,je
+        do i=is-mgn,ie+mgn
+           gp(i,j,k) = Ggrav * mass(is) /x1b(i)
+        enddo
+        enddo
+        enddo
+        
+        return
+        k = ks 
+        do i=is,ie+mgn
+           dm= 0.0d0
+           do j=js,je
+              dm = dm +d(i,j,k)*dvl2a(j)*dvl1a(i)*2.0d0*pi
+           enddo
+           mass(i+1) = mass(i)+dm
+        enddo
+        ! nabla phi = - G M/r^2 
+        j = js 
+        gp(is,j,k) = 0.0d0 
+        do i=is+1,ie+mgn
+           gp(i,j,k) = gp(i-1,j,k) - Ggrav * mass(i) /x1a(i)**2* (x1b(i)-x1b(i-1))
+        enddo
+        gps = gp(ie,j,k)
+        
+        ! phi@surfce = G M/r
+        do i=is,ie+mgn
+           gp(i,j,k) = gp(i,j,k) - gps + Ggrav * mass(ie) /x1b(ie)
+        enddo
+        gp(is-1,j,k) = gp(is,j,k) * x1b(is)/ x1b(is-1)
+        gp(is-2,j,k) = gp(is,j,k) * x1b(is)/ x1b(is-2)
+        !do i=is-mgn,ie+mgn
+        !   print *,gp(i,j,k)
+        !enddo
+        ! just copy
+        do i=is-mgn,ie+mgn
+        do j=js+1,je+mgn
+           gp(i,j,k) = gp(i,js,k) 
+        enddo
+        enddo
+        is_inited = .true.
+      end subroutine GravPotential
 !=======================================================================
 ! SUBROUTINE: GravForce
 ! Optional gravitational source term (often disabled for blastwave tests).
@@ -1439,9 +1557,14 @@
           et(i,j,k) = et(i,j,k)                    &
      & +dt*(                                       &
      &  (- nflux1(meto,i+1,j,k)*as1(i+1)           &
-     &   + nflux1(meto,i  ,j,k)*as1(i  ))*dv1i(i)  &
+     &   + nflux1(meto,i  ,j,k)*as1(i  )           & 
+     &   - nflux1(mden,i+1,j,k)*(gp(i,j,k)-gp1a(i+1,j,k))*as1(i+1)&
+     &   + nflux1(mden,i  ,j,k)*(gp(i,j,k)-gp1a(i  ,j,k))*as1(i  )&
+     &  )*dv1i(i)  &
      & +(- nflux2(meto,i,j+1,k)*as2(j+1)           &
      &   + nflux2(meto,i,j  ,k)*as2(j  )           &
+     &   - nflux2(mden,i,j+1,k)*(gp(i,j,k)-gp2a(i,j+1,k))*as2(j+1)&
+     &   + nflux2(mden,i,j  ,k)*(gp(i,j,k)-gp2a(i,j  ,k))*as2(j  )&
      &  )*dv2i(j) *(0.5d0*(as1(i+1)-as1(i))*dv1i(i)) &
      &      )
 
