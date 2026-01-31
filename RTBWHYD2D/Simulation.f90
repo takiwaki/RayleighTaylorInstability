@@ -34,8 +34,8 @@
       real(8):: tout
       data tout / 0.0d0 /
       
-      integer,parameter::izones=300 !! Number of active radial zones (excluding ghost zones)
-      integer,parameter::jzones=100
+      integer,parameter::izones=400 !! Number of active radial zones (excluding ghost zones)
+      integer,parameter::jzones=200
       integer,parameter::mgn=2      !! Number of ghost cells on each boundary
       integer,parameter::in=izones+2*mgn+1 &
      &                  ,jn=jzones+2*mgn+1 &
@@ -288,7 +288,6 @@
       enddo
       enddo
 
-!      call MakeProgenitor
       call ReadProgenitor
 
       ! Explosion occurs in the center
@@ -417,86 +416,6 @@
       
       end subroutine ReadProgenitor
     
-      subroutine MakeProgenitor  
-      use commons
-      use eosmod
-      implicit none
-      integer::i,j,k
-      real(8),dimension(ncomp):: Rshell,rho,pre,Mshell,slope
-      real(8)::pi
-      pi = acos(-1.0d0)
-      
-      Rshell(nFe) = 2.0d8  ! positon of Fe core [cm], Fe |-> CO
-      Rshell(nCO) = 1.0d9  ! positon of CO core [cm], CO |-> He
-      Rshell(nHe) = 1.0d10 ! positon of He core [cm], He |-> H
-      Rshell(nH ) = x1max  ! positon of stellar surface H| vacuum
-      
-      slope(nFe) = 1.0d0 ! density slope in Fe core, Fe | 
-      slope(nCo) = 1.0d0 ! density slope in CO core, CO |
-      slope(nHe) = 2.8d0 ! density slope in He core, He |
-      slope(nH)  = 0.5d0 ! density slope in H envelope 
-      
-      rho(nFe) = 1.5d7 ! density near the positon of  iron core             Fe |-> CO
-      rho(nCo) = 1.0d0 *rho(nFe)*(Rshell(nCO)/Rshell(nFe))**(-slope(nFe)) ! CO |-> He
-      rho(nHe) = 1.0d-2*rho(nCo)*(Rshell(nHe)/Rshell(nCO))**(-slope(nCO)) ! He |-> H
-      rho(nH ) = 1.0d-1*rho(nHe)*(Rshell(nH )/Rshell(nHe))**(-slope(nHe)) ! H  |-> vacuum 
-     
-      d(:,:,:) = rho(nH )
-      Xcomp(1:ncomp,:,:,:) = 1.0d-10
-      
-      do k=ks,ke
-      do j=js,je
-      do i=is-mgn,ie+mgn
-         if(x1b(i) < Rshell(nFe))then ! Fe core
-             ! x1b(i) > Rshell(1)
-             d(i,j,k) = rho(nFe)*(x1b(i)/Rshell(nFe))**(-slope(nFe))
-             p(i,j,k) = 1.0d18*d(i,j,k)
-             v1(i,j,k) = 0.0d0
-             Xcomp(nFe,i,j,k) = 1.0d0 ! Fe
-         else if(x1b(i) < Rshell(nCO))then ! CO core
-             ! x1b(i) > Rshell(1)
-             d(i,j,k) = rho(nCO)*(x1b(i)/Rshell(nCO))**(-slope(nCO))
-             p(i,j,k) = 0.5d18*d(i,j,k)
-             v1(i,j,k) = 0.0d0
-             Xcomp(nCO,i,j,k) = 1.0d0
-         else if(x1b(i) < Rshell(nHe))then ! He core
-             ! x1b(i) > Rshell(2)
-             d(i,j,k) = rho(nHe)*(x1b(i)/Rshell(nHe))**(-slope(nHe))
-             p(i,j,k) = 1.0d17*d(i,j,k)
-             v1(i,j,k) = 0.0d0
-             Xcomp(3,i,j,k) = 1.0d0
-         else ! Hydrogen envelope
-             ! x1b(i) > Rshell(3)
-             d(i,j,k) = rho(nH )*(x1b(i)/Rshell(nH ))**(-slope(nH ))
-             p(i,j,k) = 1.0d16*d(i,j,k)
-             v1(i,j,k) = 0.0d0
-             Xcomp(nH ,i,j,k) = 1.0d0
-          endif
-      enddo
-      enddo
-      enddo
-   
-      Mshell(1:ncomp) = 0.0d0
-      do k=ks,ke
-      do j=js,je
-      do i=is,ie+2
-             Mshell(1:ncomp) = Mshell(1:ncomp)+Xcomp(1:ncomp,i,j,k)*d(i,j,k)*dvl1a(i)*dvl2a(j)*2.0d0*pi
-      enddo
-      enddo
-      enddo
-   
-      write(6,*) "Fe core Radius [cm]",Rshell(nFe)
-      write(6,*) "M_Fe= ",Mshell(nFe)/Msolar,"[M_s]"
-      write(6,*) "CO core Radius [cm]",Rshell(nCO)
-      write(6,*) "M_CO= ",Mshell(nCO)/Msolar,"[M_s]"
-      write(6,*) "He core Radius [cm]",Rshell(nHe)
-      write(6,*) "M_He= ",Mshell(nHe)/Msolar,"[M_s]"
-      write(6,*) "Outer boundary [cm]",x1max
-      write(6,*) "M_env=",Mshell(nH )/Msolar,"[M_s]"
-    
-      end subroutine MakeProgenitor
-
-
 !=======================================================================
 ! SUBROUTINE: BoundaryCondition
 ! Apply boundary conditions at inner/outer radial boundaries (ghost zones).
