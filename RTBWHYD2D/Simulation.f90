@@ -48,7 +48,7 @@
      &                  ,ke=1
 
 
-      real(8),parameter:: x1min=1.0d8,x1max=1.0d11,dx1min=1.0d7 !! Radial domain: x1min (inner radius) to x1max (outer radius)
+      real(8),parameter:: x1min=1.0d8,x1max=5.0d11,dx1min=1.0d7 !! Radial domain: x1min (inner radius) to x1max (outer radius)
       real(8),dimension(in)::x1a,x1b,dvl1a            !! x1a: radial cell edge positions; x1b: radial cell center positions; dvl1a: geometric volume factors
 
       real(8),parameter:: x2min=0.0d0,x2max=acos(-1.0)
@@ -116,17 +116,19 @@
       implicit none
       integer,parameter:: nhyspan=100
       call print_omp_threads
-      write(6,*) "setup grids and fields"
+      print *, "setup grids and fields"
       call GenerateGrid
       call GenerateProblem
       call ConsvVariable
       call Output
-      write(6,*) "entering main loop"
+      print *, "entering main loop"
 ! main loop
-      write(6,*)"step","time [s]","dt [s]"
       mloop: do nhy=1,nhymax
          call TimestepControl
-         if(mod(nhy,nhyspan) .eq. 0 ) write(6,*)nhy,time,dt
+         if(mod(nhy,nhyspan) .eq. 0 ) then
+            print *, "step=",nhy,", t=,",time," [s], dt=",dt," [s]"
+            call flush(6)
+         endif
          call GravPotential
          call BoundaryCondition
          call GravForce
@@ -141,7 +143,7 @@
          if(time > timemax) exit mloop
       enddo mloop
       call Output
-      write(6,*) "program has been finished"
+      print *, "program has been finished"
       end program main
 
 
@@ -286,7 +288,8 @@
       enddo
       enddo
 
-      call MakeProgenitor
+!      call MakeProgenitor
+      call ReadProgenitor
 
       ! Explosion occurs in the center
       Rexp   = 1.5d8 ! 2000km
@@ -353,6 +356,67 @@
       return
       end subroutine GenerateProblem
     
+      subroutine ReadProgenitor  
+      use commons
+      use eosmod
+      implicit none
+      integer:: i,j,k
+      integer:: n
+      real(8):: r
+      character(len=*),parameter::filename= "progenitor.txt"
+      character:: dummy
+      logical:: exists
+      integer::unitprog,ios,ndata
+      real(8),allocatable,dimension(:)::rad,mass,den,pre,xH,xHe,xCO,xFe
+      inquire(file=filename, exist=exists)
+      if (.not. exists) then
+         write(*,*) "ERROR: file not found:", filename
+         stop
+      end if
+      open(newunit=unitprog, file=filename, status="old", action="read", iostat=ios)
+      read(unitprog,*) dummy, ndata
+      read(unitprog,*) dummy
+      print *, "progenitor data N=",ndata
+      allocate(rad(ndata))
+      allocate(mass,den,pre,xH,xHe,xCO,xFe,mold=rad)
+      
+      do n=1,ndata
+         read(unitprog,*) rad(n),mass(n),den(n),pre(n),xH(n),xHe(n),xCO(n),xFe(n)
+      enddo
+      close(unitprog)
+      n = 1
+      do i=is-mgn,ie+mgn
+         if(x1b(i) <= rad(1))then
+            d(i,:,:) = den(1)
+            p(i,:,:) = pre(1)
+            Xcomp(nH ,i,:,:) = xH(1) 
+            Xcomp(nHe,i,:,:) = xHe(1) 
+            Xcomp(nCO,i,:,:) = xCO(1) 
+            Xcomp(nFe,i,:,:) = xFe(1)
+         else if (x1b(i) >= rad(ndata)) then
+            d(i,:,:) = den(ndata)
+            p(i,:,:) = pre(ndata)
+            Xcomp(nH ,i,:,:) = xH(ndata) 
+            Xcomp(nHe,i,:,:) = xHe(ndata) 
+            Xcomp(nCO,i,:,:) = xCO(ndata) 
+            Xcomp(nFe,i,:,:) = xFe(ndata)
+         else
+            do while ( n < ndata .and. x1b(i) > rad(n+1) )
+               n = n +1 
+            enddo
+            r = (x1b(i)-rad(n))/(rad(n+1)-rad(n))
+            
+            d(i,:,:) = (1.0d0-r)*den(n) + r*den(n+1) 
+            p(i,:,:) = (1.0d0-r)*pre(n) + r*den(n+1)
+            Xcomp(nH ,i,:,:) = (1.0d0-r)*xH(n)  + r*xH(n+1) 
+            Xcomp(nHe,i,:,:) = (1.0d0-r)*xHe(n) + r*xHe(n+1)
+            Xcomp(nCO,i,:,:) = (1.0d0-r)*xCO(n) + r*xCO(n+1)
+            Xcomp(nFe,i,:,:) = (1.0d0-r)*xFe(n) + r*xFe(n+1)
+         endif
+      enddo
+      
+      end subroutine ReadProgenitor
+    
       subroutine MakeProgenitor  
       use commons
       use eosmod
@@ -362,20 +426,20 @@
       real(8)::pi
       pi = acos(-1.0d0)
       
-      Rshell(nFe) = 2.0d8  ! positon of Fe core [cm]
-      Rshell(nCO) = 6.0d8  ! positon of CO core [cm]
-      Rshell(nHe) = 12.0d8 ! positon of He core [cm]
-      Rshell(nH ) = x1max  ! positon of stellar surface
+      Rshell(nFe) = 2.0d8  ! positon of Fe core [cm], Fe |-> CO
+      Rshell(nCO) = 1.0d9  ! positon of CO core [cm], CO |-> He
+      Rshell(nHe) = 1.0d10 ! positon of He core [cm], He |-> H
+      Rshell(nH ) = x1max  ! positon of stellar surface H| vacuum
       
-      slope(nFe) = 0.0d0 ! density slope in Fe core 
-      slope(nCo) = 1.0d0 ! density slope in CO core 
-      slope(nHe) = 1.0d0 ! density slope in He core 
-      slope(nH)  = 1.0d0 ! density slope in H envelope 
+      slope(nFe) = 1.0d0 ! density slope in Fe core, Fe | 
+      slope(nCo) = 1.0d0 ! density slope in CO core, CO |
+      slope(nHe) = 2.8d0 ! density slope in He core, He |
+      slope(nH)  = 0.5d0 ! density slope in H envelope 
       
-      rho(nFe) = 1.5d6 ! density near the positon of  iron core
-      rho(nCo) = 1.0d-1*rho(nFe)*(Rshell(nCO)/Rshell(nFe))**(-slope(nFe)) ! CO  |-> He
-      rho(nHe) = 1.0d-1*rho(nCo)*(Rshell(nHe)/Rshell(nCO))**(-slope(nCO)) ! CO  |-> He
-      rho(nH ) = 1.0d-1*rho(nHe)*(Rshell(nH )/Rshell(nHe))**(-slope(nHe)) ! CO  |-> He
+      rho(nFe) = 1.5d7 ! density near the positon of  iron core             Fe |-> CO
+      rho(nCo) = 1.0d0 *rho(nFe)*(Rshell(nCO)/Rshell(nFe))**(-slope(nFe)) ! CO |-> He
+      rho(nHe) = 1.0d-2*rho(nCo)*(Rshell(nHe)/Rshell(nCO))**(-slope(nCO)) ! He |-> H
+      rho(nH ) = 1.0d-1*rho(nHe)*(Rshell(nH )/Rshell(nHe))**(-slope(nHe)) ! H  |-> vacuum 
      
       d(:,:,:) = rho(nH )
       Xcomp(1:ncomp,:,:,:) = 1.0d-10

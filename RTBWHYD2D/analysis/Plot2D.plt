@@ -130,8 +130,6 @@ splot [-srange:srange][-srange:srange] \
   ifnames u ( $1/xnorm*sin($2)):($1/xnorm*cos($2)):($1/xnorm<srange?(log($3)):NaN) w pm3d \
 , ifnames u (-$1/xnorm*sin($2)):($1/xnorm*cos($2)):($1/xnorm<srange?(log($3)):NaN) w pm3d \
 
-unset label
-
 ####################
 # Plot
 ####################
@@ -154,9 +152,6 @@ set title "{/Symbol d}Density"
 splot [-srange:srange][-srange:srange] \
   ifnames u ( $1/xnorm*sin($2)):($1/xnorm*cos($2)):($1/xnorm<srange?($6):NaN) w pm3d \
 , ifnames u (-$1/xnorm*sin($2)):($1/xnorm*cos($2)):($1/xnorm<srange?($6):NaN) w pm3d \
-
-unset label
-
 
 ####################
 # Plot
