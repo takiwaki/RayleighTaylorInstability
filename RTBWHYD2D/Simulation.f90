@@ -34,8 +34,8 @@
       real(8):: tout
       data tout / 0.0d0 /
       
-      integer,parameter::izones=200 !! Number of active radial zones (excluding ghost zones)
-      integer,parameter::jzones=5
+      integer,parameter::izones=300 !! Number of active radial zones (excluding ghost zones)
+      integer,parameter::jzones=100
       integer,parameter::mgn=2      !! Number of ghost cells on each boundary
       integer,parameter::in=izones+2*mgn+1 &
      &                  ,jn=jzones+2*mgn+1 &
@@ -48,7 +48,7 @@
      &                  ,ke=1
 
 
-      real(8),parameter:: x1min=1.0d8,x1max=2.0d10,dx1min=1.0d7 !! Radial domain: x1min (inner radius) to x1max (outer radius)
+      real(8),parameter:: x1min=1.0d8,x1max=1.0d11,dx1min=1.0d7 !! Radial domain: x1min (inner radius) to x1max (outer radius)
       real(8),dimension(in)::x1a,x1b,dvl1a            !! x1a: radial cell edge positions; x1b: radial cell center positions; dvl1a: geometric volume factors
 
       real(8),parameter:: x2min=0.0d0,x2max=acos(-1.0)
@@ -333,7 +333,7 @@
       do j=js,je
       do i=is,ie
          call random_number(rnum)
- !           d(i,j,k) = d(i,j,k)*(1.0d0+rrv*2.0d0*(rnum(1)-0.5d0))
+           d(i,j,k) = d(i,j,k)*(1.0d0+rrv*2.0d0*(rnum(1)-0.5d0))
       enddo
       enddo
       enddo
@@ -1337,14 +1337,15 @@
         pi = acos(-1.0d0)
         
         mass(is) =  0.0*Msolar
-        
+        !$omp parallel do collapse(3)
         do k=ks,ke
         do j=js,je
         do i=is-mgn,ie+mgn
            gp(i,j,k) = Ggrav * mass(is) /x1b(i)
         enddo
         enddo
-        enddo
+       enddo
+       !$end omp parallel 
         
         return
         k = ks 
@@ -1394,14 +1395,9 @@
       do k=ks,ke
       do j=js,je
       do i=is,ie+1
-         gp1a(i  ,j,k) = gp(i,j,k) &
-     & - 0.5d0*(gp(i  ,j,k)-gp(i-1,j,k))
-
-         gp1a(i+1,j,k) = gp(i,j,k) &
-     & + 0.5d0*(gp(i+1,j,k)-gp(i  ,j,k))
-
-       grvsrc1(i,j,k) = (gp1a(i+1,j,k)-gp1a(i,j,k))/(x1a(i+1)-x1a(i))*d(i,j,k)
-
+         gp1a(i  ,j,k)  = gp(i,j,k) - 0.5d0*(gp(i  ,j,k)-gp(i-1,j,k))
+         gp1a(i+1,j,k)  = gp(i,j,k) + 0.5d0*(gp(i+1,j,k)-gp(i  ,j,k))
+         grvsrc1(i,j,k) = (gp1a(i+1,j,k)-gp1a(i,j,k))/(x1a(i+1)-x1a(i))*d(i,j,k)
       enddo
       enddo
       enddo
@@ -1411,13 +1407,9 @@
       do k=ks,ke
       do i=is,ie
       do j=js,je+1
-         gp2a(i  ,j,k) = gp(i,j,k) &
-     & - 0.5d0*(gp(i  ,j,k)-gp(i,j-1,k))
-
-         gp2a(i,j+1,k) = gp(i,j,k) &
-     & + 0.5d0*(gp(i,j+1,k)-gp(i  ,j,k))
-
-       grvsrc2(i,j,k) = (gp2a(i,j+1,k)-gp2a(i,j,k))/(x2a(j+1)-x2a(j))*d(i,j,k)
+         gp2a(i  ,j,k)  = gp(i,j,k) - 0.5d0*(gp(i  ,j,k)-gp(i,j-1,k))
+         gp2a(i,j+1,k)  = gp(i,j,k) + 0.5d0*(gp(i,j+1,k)-gp(i  ,j,k))
+         grvsrc2(i,j,k) = (gp2a(i,j+1,k)-gp2a(i,j,k))/(x2a(j+1)-x2a(j))*d(i,j,k)
 
       enddo
       enddo
@@ -1447,6 +1439,7 @@
         
       wshock(:,:,:) = 0.0d0
       
+!$omp parallel do collapse(3)
       do k=ks,ke
       do j=js,je
       do i=is,ie+1
@@ -1458,7 +1451,9 @@
       enddo
       enddo
       enddo  
+!$end omp parallel
 
+!$omp parallel do collapse(3)
       do k=ks,ke
       do i=is,ie
       do j=js,je+1
@@ -1470,6 +1465,7 @@
       enddo
       enddo
       enddo
+!$end omp parallel
       
       return
       end subroutine CheckShock
