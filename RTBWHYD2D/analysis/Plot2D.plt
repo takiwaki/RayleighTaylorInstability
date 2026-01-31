@@ -58,7 +58,7 @@ timetxt = sprintf("%g",time).timeunit
 print "time=".timetxt
 
 # Showing Time
-set label timetxt at screen 0.65, screen 0.85
+set label timetxt at screen 0.65, screen 0.88
 
 
 ##########################################
@@ -84,9 +84,9 @@ srange = rmax/xnorm
 ####################
 
 set tmargin 0
-set bmargin 0
-set lmargin 0
-set rmargin 0
+set bmargin 1
+set lmargin 1
+set rmargin 2
 
 set size ratio -1
 set view map
@@ -106,13 +106,15 @@ set ytics offset 0,0.7
 ####################
 # Plot
 ####################
+
+# Density
 ofname = sprintf("figures/dentwo%05d.png",ifnum)
 print ofname
 if (pngflag==1) set output ofname
 
 # Position of color bar
-set colorbox horizontal user origin 0.235, 0.87 size 0.5, 0.04
-set cbtics offset 0,3.2
+set colorbox user origin 0.83, 0.13 size 0.03, 0.7
+set cbtics offset -0.5,0
 
 # Range of color bar
 # range of the variable
@@ -122,6 +124,7 @@ set cbtics offset 0,3.2
 
 set title "log_{10} (Density [g/cm^3])"
 
+set palette defined (0.00 "#440154", 0.25 "#3b528b", 0.50 "#21908d", 0.75 "#5dc863", 1.00 "#fde725" ) # viridis
 # Main plot
 splot [-srange:srange][-srange:srange] \
   ifnames u ( $1/xnorm*sin($2)):($1/xnorm*cos($2)):($1/xnorm<srange?(log($3)):NaN) w pm3d \
@@ -135,10 +138,6 @@ unset label
 ofname = sprintf("figures/dldtwo%05d.png",ifnum)
 print ofname
 if (pngflag==1) set output ofname
-
-# Position of color bar
-set colorbox horizontal user origin 0.235, 0.87 size 0.5, 0.04
-set cbtics offset 0,3.2
 
 # Range of color bar
 # range of the variable
