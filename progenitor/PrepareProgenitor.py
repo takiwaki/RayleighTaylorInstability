@@ -8,16 +8,19 @@ import matplotlib.pyplot as plt
 
 Msun   = 1.989e33
 
-input="s12.0_presn"
 
 def Main():
+    input="s12.0_presn"
     dfinp = ReadData(input)
     dfori = ReduceElement(dfinp)
     SaveData(dfori,"s12.0.txt")
+    
     dfmod = ModifyData(dfori)
     SaveData(dfmod,"s12.0mod.txt")
+    
     dfana = AnalyticModel()
     SaveData(dfana,"analytic.txt")
+    
     CompareData(dfori,dfana)
     
 def ReadData(file):
@@ -54,10 +57,11 @@ def ModifyData(df):
     return dfout
 
 def AnalyticModel():
+    import math
     r_max = 1.0e13 # stellar radius [cm]
     r_min = 0.0e0
     L = (r_max-r_min)
-    nr=500
+    nr=1000
     drmin= L /nr /100
     
     r = 1.01
@@ -96,23 +100,29 @@ def AnalyticModel():
 
     # ===== shell radii =====
     Rshell = np.zeros(ncomp)
-    Rshell[nFe] = 2.0e8
-    Rshell[nCO] = 1.0e9
-    Rshell[nHe] = 1.0e10
-    Rshell[nH ] = r_max
-
+    Rshell[nFe] = 2.0e8  # end of Fe core, start of CO core
+    Rshell[nCO] = 0.6e9  # end of CO core, start of He core
+    Rshell[nHe] = 1.0e10 # end of He core, start of H envelope
+    Rshell[nH ] = r_max  # stellar surface
+    
+    Wshell = np.zeros(ncomp)
+    Wshell[nFe] = 0.0
+    Wshell[nCO] = 0.0
+    Wshell[nHe] = 0.0 # transition fraction at end of He core, start of H envelope
+    Wshell[nH ] = 0.0
+    
     # ===== density slopes =====
     slope = np.zeros(ncomp)
-    slope[nFe] = 2.0
-    slope[nCO] = 2.0
-    slope[nHe] = 2.8
-    slope[nH ] = 0.5
+    slope[nFe] = 1.0
+    slope[nCO] = 1.0
+    slope[nHe] = 1.0
+    slope[nH ] = 1.0
 
     # ===== densities at shell boundaries =====
     rho0 = np.zeros(ncomp)
-    rho0[nFe] = 1.5e7
-    rho0[nCO] = rho0[nFe] * (Rshell[nCO] / Rshell[nFe]) ** (-slope[nFe])
-    rho0[nHe] = 1.0e-1 * rho0[nCO] * (Rshell[nHe] / Rshell[nCO]) ** (-slope[nCO])
+    rho0[nFe] = 5.0e6
+    rho0[nCO] =          rho0[nFe] * (Rshell[nCO] / Rshell[nFe]) ** (-slope[nFe])
+    rho0[nHe] = 1.0e-2 * rho0[nCO] * (Rshell[nHe] / Rshell[nCO]) ** (-slope[nCO])
     rho0[nH ] = 1.0e-1 * rho0[nHe] * (Rshell[nH ] / Rshell[nHe]) ** (-slope[nHe])
 
     # ===== arrays =====
@@ -131,16 +141,22 @@ def AnalyticModel():
             pressure[i] = 5.0e17 * density[i]
             X[nFe, i] = 1.0
 
-        elif r < Rshell[nCO]:  # CO core
+        elif r < Rshell[nCO] :  # CO core
             density[i]  = rho0[nCO] * (r / Rshell[nCO]) ** (-slope[nCO])
-            pressure[i] = 1e17 * density[i]
-            X[nCO, i] = 1.0
-
-        elif r < Rshell[nHe]:  # He core
+            pressure[i] = 5.0e17 * density[i]
+            X[nCO, i] = 1.0         
+        elif r < (1.0-Wshell[nHe])*Rshell[nHe] :  # He core
             density[i]  = rho0[nHe] * (r / Rshell[nHe]) ** (-slope[nHe])
-            pressure[i] = 1.0e16 * density[i]
-            X[nHe, i] = 1.0
-
+            pressure[i] = 5.0e17 * density[i]
+            X[nHe, i] = 1.0        
+        elif r < Rshell[nHe] : # transition He => H
+            S = (r - (1.0-Wshell[nHe])*Rshell[nHe]) / (Wshell[nHe]*Rshell[nHe]) # 0-1
+            denhe  = rho0[nHe] * ((1.0-Wshell[nHe])) ** (-slope[nHe])
+            denh   = rho0[nH] * (Rshell[nHe]/ Rshell[nH]) ** (-slope[nH])
+            density[i]  =math.exp( (1.0 - S) * math.log(denhe) + S * math.log(denh))
+            pressure[i] = 5.0e17 * density[i]
+            X[nHe, i] = 1.0-S
+            X[nH , i] = S
         else:  # H envelope
             density[i]  = rho0[nH] * (r / Rshell[nH]) ** (-slope[nH])
             pressure[i] = 0.5e16 * density[i]
@@ -223,7 +239,7 @@ def CompareData(df1,df2):
     ax.plot(x, y)
     
     ax.set_xlabel("radius [cm]")
-    ax.set_ylabel(r"$p r^3$ [g]")
+    ax.set_ylabel(r"$p r^3$ [erg]")
     ax.set_xscale("log")
     ax.set_xlim(1.0e8,5.0e11)
     ax.set_yscale("log")

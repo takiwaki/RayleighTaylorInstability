@@ -291,9 +291,9 @@
       call ReadProgenitor
 
       ! Explosion occurs in the center
-      Rexp   = 1.5d8 ! 2000km
+      Rexp   = 2.0d8 ! 2000km
       Mexp   = 1.0d0  ! [M_s]
-      Eexp   = 0.8d51 ! [erg]
+      Eexp   = 1.3d51 ! [erg]
       volexp = 4.0*pi/3.0d0*(Rexp**3 - x1min**3) ! [cm^3]
       rhoexp = (Mexp*Msolar)/volexp      ! [g/cm^-3]
       preexp = Eexp/(volexp)*(gam-1.0d0) ! [erg/cm^-3]
@@ -335,7 +335,10 @@
       do j=js,je
       do i=is,ie
          call random_number(rnum)
-           d(i,j,k) = d(i,j,k)*(1.0d0+rrv*2.0d0*(rnum(1)-0.5d0))
+         d(i,j,k) = d(i,j,k)*(1.0d0+rrv*2.0d0*(rnum(1)-0.5d0))
+!         if(x1b(i) > 0.7e10 .and. x1b(i) <1.0e10) then
+!            d(i,j,k) = d(i,j,k)*(1.0d0+0.5*sin(x2b(j)*5.0d0))
+!         endif
       enddo
       enddo
       enddo
