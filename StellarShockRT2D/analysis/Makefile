@@ -49,6 +49,7 @@ VELONEPNG = $(patsubst ${dira}/onepro%.dat,${dirf}/velone%.png,$(ONEPRO))
 PREONEPNG = $(patsubst ${dira}/onepro%.dat,${dirf}/preone%.png,$(ONEPRO))
 XCMONEPNG = $(patsubst ${dira}/onepro%.dat,${dirf}/xcmone%.png,$(ONEPRO))
 
+# 2D colormap
 
 TWOPRO    = $(patsubst ${dird}/unf%.dat,${dira}/twopro%.dat,$(BIN))
 DENTWOPNG = $(patsubst ${dira}/twopro%.dat,${dirf}/dentwo%.png,$(TWOPRO))
@@ -56,7 +57,12 @@ DENTWOPNG = $(patsubst ${dira}/twopro%.dat,${dirf}/dentwo%.png,$(TWOPRO))
 #PRETWOPNG = $(patsubst ${dira}/rtp%.dat,${dirf}/pre%.png,$(TWOPRO))
 XCMTWOPNG = $(patsubst ${dira}/twopro%.dat,${dirf}/xcmtwo%.png,$(TWOPRO))
 
-.PRECIOUS: ${ONEPRO}
+
+# velocity distribution
+VELPRO    = $(patsubst ${dird}/unf%.dat,${dira}/velpro%.dat,$(BIN))
+DISVELPNG = $(patsubst ${dira}/velpro%.dat,${dirf}/veldis%.png,$(VELPRO))
+
+.PRECIOUS: ${ONEPRO} ${TWOPRO}
 
 ##########################################
 # Movies
@@ -122,7 +128,7 @@ ${xcmtwomovie}: MakeMovie.sh ${XCMTWOPNG}
 # gnuplot
 #################
 .PHONY: 1Dsnaps
-1Dsnaps: ${DENONEPNG} ${VELONEPNG} ${PREONEPNG} ${XCMONEPNG}  ## Make one-dimentional plot
+1Dsnaps: ${DENONEPNG} ${VELONEPNG} ${PREONEPNG} ${XCMONEPNG} ${DISVELPNG}  ## Make one-dimentional plot
 
 ${DENONEPNG}: MakeSnap.sh Plot1D.plt ${ONEPRO}
 	./MakeSnap.sh onepro Plot1D.plt
@@ -141,6 +147,9 @@ ${DENTWOPNG}: MakeSnap.sh Plot2D.plt ${TWOPRO}
 
 ${XCMTWOPNG}: MakeSnap.sh Plot2D.plt ${TWOPRO}
 	./MakeSnap.sh twopro Plot2D.plt
+
+${DISVELPNG}: MakeSnap.sh PlotVel.plt ${VELPRO}
+	./MakeSnap.sh velpro PlotVel.plt
 
 
 #################

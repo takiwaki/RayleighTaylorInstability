@@ -415,7 +415,50 @@ subroutine TimeProfile
 end subroutine TimeProfile
 
 subroutine VelocityDistibution
+  use unitsmod
+  use fieldmod
   implicit none
+  integer:: i,j,k
+  integer:: nv
+  integer,parameter:: nvmax = 1000
+  real(8),dimension(0:ncomp,0:nvmax):: dM
+  real(8):: vmin,vmax,dv
+  real(8):: pi 
+  character(20),parameter::dirname="output/"
+  character(40)::filename
+  integer::unitvel
+  
+  pi = acos(-1.0d0)
+
+  vmax= 10.0d8 ! cm/s
+  vmin= 0.0d0 ! cm/s
+  dv = vmax/nvmax
+  dM(:,:) = 0.0d0
+  k=ks
+  do j=js,je
+  do i=is,ie
+        nv = int(v1(i,j,k)/dv)
+        nv = max(0,min(nvmax,nv))
+        dM(0,nv) = dM(0,nv) + d(i,j,k)*dvl1a(i)*dvl2a(j)*2.0d0*pi 
+        dM(1:ncomp,nv) = dM(1:ncomp,nv) + abs(Xcomp(1:ncomp,i,j,k))*d(i,j,k)*dvl1a(i)*dvl2a(j)*2.0d0*pi 
+  enddo      
+  enddo
+  dv = dv/1.0d5 ! km/s
+  dM(:,:) = dM(:,:)/Msolar
+  write(filename,'(a6,i5.5,a4)')"velpro",incr,".dat"
+  filename = trim(dirname)//filename
+  open(newunit=unitvel,file=filename,status='replace',form='formatted')
+!                                    12345678901
+  write(unitvel,'(a11,1(1x,E12.3))') "#  time_sc=",time
+  write(unitvel,'(a11,1(1x,E12.3))') "#       dv=",dv
+!                                      1234567890123   1234567890123   1234567890123   1234567890123   1234567890123   1234567890123   1234567890123
+  write(unitvel,'(1a,9(1x,a13))') "#","1:v[km/s]    ","2:dM[Ms]     ","3:dM(H)[Ms]  ","4:dM(He)[Ms] ","5:dM(CO)[Ms] ","5:dM(Fe)[Ms] "
+
+  do nv=0,nvmax
+     write(unitvel,'(1x,9(1x,E13.3))') dv * nv,dM(0,nv),dM(1,nv),dM(2,nv),dM(3,nv),dM(4,nv)
+  enddo
+  close(unitvel)
+  
 end subroutine VelocityDistibution
 
 subroutine makedirs(outdir)
