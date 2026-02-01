@@ -370,6 +370,7 @@
       logical:: exists
       integer::unitprog,ios,ndata
       real(8),allocatable,dimension(:)::rad,mass,den,pre,xH,xHe,xCO,xFe
+      real(8):: norm
       inquire(file=filename, exist=exists)
       if (.not. exists) then
          write(*,*) "ERROR: file not found:", filename
@@ -414,9 +415,23 @@
             Xcomp(nHe,i,:,:) = (1.0d0-r)*xHe(n) + r*xHe(n+1)
             Xcomp(nCO,i,:,:) = (1.0d0-r)*xCO(n) + r*xCO(n+1)
             Xcomp(nFe,i,:,:) = (1.0d0-r)*xFe(n) + r*xFe(n+1)
+            
          endif
       enddo
-      
+
+      k=ks
+      do j=js,je
+      do i=is-mgn,ie+mgn   
+         norm = sum(Xcomp(1:ncomp,i,j,k))
+         if(norm == 0.0d0) then
+            Xcomp(nFe,i,j,k) = 1.d0; norm=1.0d0
+         endif
+         Xcomp(1:ncomp,i,j,k) = Xcomp(1:ncomp,i,j,k)/norm
+         do n=1,ncomp
+            Xcomp(n,i,j,k) = max(0.0d0,Xcomp(n,i,j,k))
+         enddo
+      enddo
+      enddo
       end subroutine ReadProgenitor
     
 !=======================================================================
@@ -530,7 +545,8 @@
       use commons
       use eosmod
       implicit none
-      integer::i,j,k
+      integer:: i,j,k
+      integer:: n 
       real(8)::norm
       
 !$omp parallel do collapse(3)
@@ -553,9 +569,16 @@
 !           p(i,j,k) =  d(i,j,k)*csiso**2
 !          cs(i,j,k) =  csiso
           
+          do n=1,ncomp
+             DXcomp(n,i,j,k) = max(0.0d0,DXcomp(n,i,j,k))
+          enddo
           Xcomp(1:ncomp,i,j,k) = DXcomp(1:ncomp,i,j,k)/d(i,j,k)
           norm = sum(Xcomp(1:ncomp,i,j,k))
-          Xcomp(1:ncomp,i,j,k) = Xcomp(1:ncomp,i,j,k)/norm
+          if(norm == 0.0d0) then
+             Xcomp(nFe,i,j,k) = 1.d0; norm=1.0d0
+          endif
+           Xcomp(1:ncomp,i,j,k) = Xcomp(1:ncomp,i,j,k)/norm
+          DXcomp(1:ncomp,i,j,k) = Xcomp(1:ncomp,i,j,k)*d(i,j,k)
       enddo
       enddo
       enddo
@@ -1558,9 +1581,6 @@
      &   + nflux2(meto+1:mflx,i,j  ,k)*as2(j  )           &
      &  )*dv2i(j)*0.5d0*(as1(i+1)-as1(i))* dv1i(i) &
      &      )
-         do n=1,ncomp
-            DXcomp(n,i,j,k) = max(1.0d-10,DXcomp(n,i,j,k))
-         enddo
       enddo
       enddo
      enddo
