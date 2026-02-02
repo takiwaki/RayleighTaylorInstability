@@ -1,0 +1,17 @@
+#!/bin/bash
+#PBS -N RT-multi
+#PBS -q openmp
+#PBS -m n
+#PBS -l select=1:ncpus=4
+#PBS -l walltime=00:30:00
+
+module load intel/2024
+
+export OMP_NUM_THREADS=4
+export OMP_PLACES=cores
+export OMP_PROC_BIND=close
+
+cd $PBS_O_WORKDIR
+./Simulation.x
+
+
