@@ -3,6 +3,11 @@
 gscript=$1
 echo "use "$gscript
 
+cleanup() {
+    exit 130
+}
+trap cleanup INT TERM
+
 fstfile=`ls -1 ./output/tot*.dat 2>/dev/null | head -1`
 echo $fstfile
 declare -i fstnum=`echo  ${fstfile##*/} | tr -cd '0123456789\n' |sed -e 's/^0\+\([0-9]\+\)$/\1/'`
