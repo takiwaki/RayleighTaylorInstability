@@ -2,10 +2,10 @@
 # initialize
 ######################
 
-set tmargin 0
-set bmargin 0
-set lmargin 0
-set rmargin 0
+set tmargin at screen 0.8
+set bmargin at screen 0.15
+set lmargin at screen 0.15
+set rmargin at screen 0.9
 
 set view map
 unset key
@@ -46,11 +46,10 @@ set cbtics offset 0,3.2
 
 set size 1.0
 
-set origin 0.05,0.0
-set xlabel "X" offset 0,0
-set xtics 0.25
-set ylabel "Y" offset 0,0
-set ytics 0.25
+set xlabel "X" offset 0,0.5
+set xtics 0.25 offset 0,0.5
+set ylabel "Y" offset 1.0,0
+set ytics 0.25 offset 0.5,0
 
 set xrange [-1.50:1.50]
 set yrange [-0.75:0.75]
@@ -71,7 +70,7 @@ ofname = sprintf("figures/den%05d.png",ifnum)
 set output ofname
 
 
-set label 1 time at screen 0.45, screen 0.8
+set label 1 time at screen 0.7, screen 0.9
 
 set palette define (-1.0 "blue", 0.0 "white", 1.0 "red")
 
