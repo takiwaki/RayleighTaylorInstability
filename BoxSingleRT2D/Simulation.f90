@@ -434,98 +434,101 @@ end module eosmod
       implicit none
       integer::i,j,k
       real(8),dimension(nhyd):: dsvp,dsvm,dsvc,dsv
-      real(8),dimension(nhyd,in,jn,kn):: leftpr,rigtpr
-      real(8),dimension(2*mflx+madd,in,jn,kn):: leftco,rigtco
-      real(8),dimension(2*mflx+madd):: leftst,rigtst
+      real(8),dimension(nhyd):: Pleftc1, Pleftc2, Plefte
+      real(8),dimension(nhyd):: Prigtc1, Prigtc2, Prigte
+      real(8),dimension(2*mflx+madd):: leftco,rigtco
       real(8),dimension(mflx):: nflux
-
-      k=ks
+     k=ks
+!$omp parallel do collapse(2) private(Pleftc1,Pleftc2,Plefte,Prigtc1,Prigtc2,Prigte,dsvp,dsvm,dsv,leftco,rigtco,nflux)
       do j=js,je
-      do i=is-1,ie+1
-         dsvp(:) = (svc(:,i+1,j,k) -svc(:,i,j,k)                 )
-         dsvm(:) = (                svc(:,i,j,k) - svc(:,i-1,j,k))
-
+      do i=is,ie+1
+         Pleftc1(:) = svc(:,i-2,j,k)
+         Pleftc2(:) = svc(:,i-1,j,k)
+         Prigtc1(:) = svc(:,i  ,j,k)
+         Prigtc2(:) = svc(:,i+1,j,k)
+         
+! | Pleftc1   | Pleftc2 =>| Prigtc1   | Prigtc2   |        
+!                     You are here               
+!====================
+! Left
+!====================
+         dsvp(:) = Prigtc1(:) - Pleftc2(:) 
+         dsvm(:) =              Pleftc2(:) - Pleftc1(:)
          call vanLeer(dsvp,dsvm,dsv)
-!         call minmod(dsvp,dsvm,dsv)
-         leftpr(:,i+1,j,k) = svc(:,i,j,k) + 0.5d0*dsv(:)
-         rigtpr(:,i  ,j,k) = svc(:,i,j,k) - 0.5d0*dsv(:)
-      enddo
-      enddo
+         Plefte(:) = Pleftc2(:) + 0.5d0*dsv(:)
 
-      do j=js,je
-      do i=is,ie+1
-         leftco(mudn,i,j,k)=leftpr(nden,i,j,k) ! rho
-         leftco(muvu,i,j,k)=leftpr(nve1,i,j,k)*leftpr(nden,i,j,k)  ! rho v_x
-         leftco(muvv,i,j,k)=leftpr(nve2,i,j,k)*leftpr(nden,i,j,k)  ! rho v_y
-         leftco(muvw,i,j,k)=leftpr(nve3,i,j,k)*leftpr(nden,i,j,k)  ! rho v_z
-         leftco(muet,i,j,k)=leftpr(nene,i,j,k)*leftpr(nden,i,j,k) &! e_i+ rho v^2/2
-     &               +0.5d0*leftpr(nden,i,j,k)*(    &
-     &                     +leftpr(nve1,i,j,k)**2   &
-     &                     +leftpr(nve2,i,j,k)**2   &
-     &                     +leftpr(nve3,i,j,k)**2)
+! Consvative variables
+         leftco(mudn)=Plefte(nden) ! rho
+         leftco(muvu)=Plefte(nve1)*Plefte(nden)   ! rho v_x
+         leftco(muvv)=Plefte(nve2)*Plefte(nden)   ! rho v_y
+         leftco(muvw)=Plefte(nve3)*Plefte(nden)   ! rho v_z
+         leftco(muet)=Plefte(nene)*Plefte(nden) & ! e_i
+     &               +0.5d0*Plefte(nden)*(                  &
+     &                     +Plefte(nve1)**2                 &
+     &                     +Plefte(nve2)**2                 &
+     &                     +Plefte(nve3)**2)                 ! + rho v^2/2
 
-         leftco(mfdn,i,j,k)=leftpr(nden,i,j,k)                   *leftpr(nve1,i,j,k)
-         leftco(mfvu,i,j,k)=leftpr(nden,i,j,k)*leftpr(nve1,i,j,k)*leftpr(nve1,i,j,k) &
-     &                     +leftpr(npre,i,j,k)
-         leftco(mfvv,i,j,k)=leftpr(nden,i,j,k)*leftpr(nve2,i,j,k)*leftpr(nve1,i,j,k)
-         leftco(mfvw,i,j,k)=leftpr(nden,i,j,k)*leftpr(nve3,i,j,k)*leftpr(nve1,i,j,k)
-         leftco(mfet,i,j,k)=(leftpr(nene,i,j,k)*leftpr(nden,i,j,k)  &
-     &               +0.5d0*leftpr(nden,i,j,k)*(   &
-     &                     +leftpr(nve1,i,j,k)**2  &
-     &                     +leftpr(nve2,i,j,k)**2  &
-     &                     +leftpr(nve3,i,j,k)**2) &
-     &                     +leftpr(npre,i,j,k)     &
-     &                       )                                  *leftpr(nve1,i,j,k) 
+! Flux
+         leftco(mfdn)=Plefte(nden)             *Plefte(nve1)
+         leftco(mfvu)=Plefte(nden)*Plefte(nve1)*Plefte(nve1)+Plefte(npre)
+         leftco(mfvv)=Plefte(nden)*Plefte(nve2)*Plefte(nve1)
+         leftco(mfvw)=Plefte(nden)*Plefte(nve3)*Plefte(nve1)
+         leftco(mfet)= (Plefte(nene)*Plefte(nden)  &
+              &         +0.5d0*Plefte(nden)*(   &
+     &                     +Plefte(nve1)**2  &
+     &                     +Plefte(nve2)**2  &
+     &                     +Plefte(nve3)**2) &
+     &                     +Plefte(npre) )*Plefte(nve1)
+         leftco(mcsp)= Plefte(ncsp)
+         leftco(mvel)= Plefte(nve1)
+         leftco(mpre)= Plefte(npre)
 
-         leftco(mcsp,i,j,k)= leftpr(ncsp,i,j,k)
-         leftco(mvel,i,j,k)= leftpr(nve1,i,j,k)
-         leftco(mpre,i,j,k)= leftpr(npre,i,j,k)
-
-
-         rigtco(mudn,i,j,k)=rigtpr(nden,i,j,k)
-         rigtco(muvu,i,j,k)=rigtpr(nve1,i,j,k)*rigtpr(nden,i,j,k)
-         rigtco(muvv,i,j,k)=rigtpr(nve2,i,j,k)*rigtpr(nden,i,j,k)
-         rigtco(muvw,i,j,k)=rigtpr(nve3,i,j,k)*rigtpr(nden,i,j,k)
-         rigtco(muet,i,j,k)=rigtpr(nene,i,j,k)*rigtpr(nden,i,j,k) &
-     &               +0.5d0*rigtpr(nden,i,j,k)*(  &
-     &                     +rigtpr(nve1,i,j,k)**2 &
-     &                     +rigtpr(nve2,i,j,k)**2 &
-     &                     +rigtpr(nve3,i,j,k)**2)
-
-         rigtco(mfdn,i,j,k)=rigtpr(nden,i,j,k)                   *rigtpr(nve1,i,j,k)
-         rigtco(mfvu,i,j,k)=rigtpr(nden,i,j,k)*rigtpr(nve1,i,j,k)*rigtpr(nve1,i,j,k) &
-     &                     +rigtpr(npre,i,j,k)
-         rigtco(mfvv,i,j,k)=rigtpr(nden,i,j,k)*rigtpr(nve2,i,j,k)*rigtpr(nve1,i,j,k)
-         rigtco(mfvw,i,j,k)=rigtpr(nden,i,j,k)*rigtpr(nve3,i,j,k)*rigtpr(nve1,i,j,k)
-         rigtco(mfet,i,j,k)=(rigtpr(nene,i,j,k)*rigtpr(nden,i,j,k) &
-     &               +0.5d0*rigtpr(nden,i,j,k)*(   &
-     &                     +rigtpr(nve1,i,j,k)**2  &
-     &                     +rigtpr(nve2,i,j,k)**2  &
-     &                     +rigtpr(nve3,i,j,k)**2) &
-     &                     +rigtpr(npre,i,j,k)     &
-     &                      )                                    *rigtpr(nve1,i,j,k)
-
-         rigtco(mcsp,i,j,k)= rigtpr(ncsp,i,j,k)
-         rigtco(mvel,i,j,k)= rigtpr(nve1,i,j,k)
-         rigtco(mpre,i,j,k)= rigtpr(npre,i,j,k)
-
-      enddo
-      enddo
-
-      do j=js,je
-      do i=is,ie+1
-         leftst(:)=leftco(:,i,j,k)
-         rigtst(:)=rigtco(:,i,j,k)
-!         call HLLE(leftst,rigtst,nflux)
-         call HLLC(leftst,rigtst,nflux)
+! | Pleftc1   | Pleftc2 |<= Prigtc1   | Prigtc2   |        
+!                     You are here               
+!====================
+! Right
+!====================
+         dsvp = Prigtc2(:) - Prigtc1(:) 
+         dsvm =              Prigtc1(:) - Pleftc2(:)
+         call vanLeer(dsvp,dsvm,dsv)
+         Prigte(:) = Prigtc1(:) - 0.5d0*dsv(:)
+         
+! Consvative variables
+         rigtco(mudn)=Prigte(nden) ! rho
+         rigtco(muvu)=Prigte(nve1)*Prigte(nden)   ! rho v_x
+         rigtco(muvv)=Prigte(nve2)*Prigte(nden)   ! rho v_y
+         rigtco(muvw)=Prigte(nve3)*Prigte(nden)   ! rho v_z
+         rigtco(muet)=Prigte(nene)*Prigte(nden) & ! e_i
+     &               +0.5d0*Prigte(nden)*(                  &
+     &                     +Prigte(nve1)**2                 &
+     &                     +Prigte(nve2)**2                 &
+     &                     +Prigte(nve3)**2)
+ 
+         rigtco(mfdn)=Prigte(nden)             *Prigte(nve1)
+         rigtco(mfvu)=Prigte(nden)*Prigte(nve1)*Prigte(nve1)+Prigte(npre)
+         rigtco(mfvv)=Prigte(nden)*Prigte(nve2)*Prigte(nve1)
+         rigtco(mfvw)=Prigte(nden)*Prigte(nve3)*Prigte(nve1)
+         rigtco(mfet)=(Prigte(nene)*Prigte(nden)  &
+              &         +0.5d0*Prigte(nden)*(   &
+     &                     +Prigte(nve1)**2  &
+     &                     +Prigte(nve2)**2  &
+     &                     +Prigte(nve3)**2) &
+     &                     +Prigte(npre) )*Prigte(nve1)
+         rigtco(mcsp)= Prigte(ncsp)
+         rigtco(mvel)= Prigte(nve1)
+         rigtco(mpre)= Prigte(npre)
+         !call HLLE(leftco,rigtco,nflux)
+         call HLLC(leftco,rigtco,nflux)
          nflux1(mden,i,j,k)=nflux(mden)
          nflux1(mrv1,i,j,k)=nflux(mrvu)
          nflux1(mrv2,i,j,k)=nflux(mrvv)
          nflux1(mrv3,i,j,k)=nflux(mrvw)
          nflux1(meto,i,j,k)=nflux(meto)
-      enddo
-      enddo
 
+      enddo
+      enddo
+!$omp end parallel do
+      
       return
       end subroutine Numericalflux1
 
@@ -535,102 +538,99 @@ end module eosmod
       implicit none
       integer::i,j,k
       real(8),dimension(nhyd):: dsvp,dsvm,dsvc,dsv
-      real(8),dimension(nhyd,in,jn,kn):: leftpr,rigtpr
-      real(8),dimension(2*mflx+madd,in,jn,kn):: leftco,rigtco
-      real(8),dimension(2*mflx+madd):: leftst,rigtst
+      real(8),dimension(nhyd):: Pleftc1, Pleftc2, Plefte
+      real(8),dimension(nhyd):: Prigtc1, Prigtc2, Prigte
+      real(8),dimension(2*mflx+madd):: leftco,rigtco
       real(8),dimension(mflx):: nflux
 
-      k=ks
-      do i=is,ie
-      do j=js-1,je+1
-         dsvp(:) = (svc(:,i,j+1,k) -svc(:,i,j,k)                 )
-         dsvm(:) = (                svc(:,i,j,k) - svc(:,i,j-1,k))
-
+     k=ks
+!$omp parallel do collapse(2) private(Pleftc1,Pleftc2,Plefte,Prigtc1,Prigtc2,Prigte,dsvp,dsvm,dsv,leftco,rigtco,nflux)
+     do i=is,ie
+     do j=js,je+1
+         Pleftc1(:) = svc(:,i,j-2,k)
+         Pleftc2(:) = svc(:,i,j-1,k)
+         Prigtc1(:) = svc(:,i,j  ,k)
+         Prigtc2(:) = svc(:,i,j+1,k)     
+! | Pleftc1   | Pleftc2 =>| Prigtc1   | Prigtc2   |        
+!                     You are here   
+!====================
+! Left
+!====================
+         dsvp(:) = (Prigtc1(:) - Pleftc2(:))
+         dsvm(:) = (Pleftc2(:) - Pleftc1(:))
          call vanLeer(dsvp,dsvm,dsv)
-!         call minmod(dsvp,dsvm,dsv)
-         leftpr(:,i,j+1,k) = svc(:,i,j,k) + 0.5d0*dsv(:)
-         rigtpr(:,i,j  ,k) = svc(:,i,j,k) - 0.5d0*dsv(:)
+         Plefte(:) = Pleftc2(:) + 0.5d0*dsv(:)
+         
+! Consvative variables
+         leftco(mudn)=Plefte(nden)
+         leftco(muvw)=Plefte(nve1)*Plefte(nden)
+         leftco(muvu)=Plefte(nve2)*Plefte(nden)   ! rho v
+         leftco(muvv)=Plefte(nve3)*Plefte(nden)
+         leftco(muet)=Plefte(nene)*Plefte(nden) & ! internal
+                     +0.5d0*Plefte(nden)*(                  &
+     &                     +Plefte(nve1)**2                 &
+     &                     +Plefte(nve2)**2                 &
+     &                     +Plefte(nve3)**2)                
 
-!         leftpr(:,i,j,k) = svc(:,i,j-1,k)
-!         rigtpr(:,i,j,k) = svc(:,i,j  ,k)
+         leftco(mfdn)=Plefte(nden)             *Plefte(nve2)   ! rho v
+         leftco(mfvw)=Plefte(nden)*Plefte(nve1)*Plefte(nve2)
+         leftco(mfvu)=Plefte(nden)*Plefte(nve2)*Plefte(nve2)+Plefte(npre)
+         leftco(mfvv)=Plefte(nden)*Plefte(nve3)*Plefte(nve2)
+         leftco(mfet)= (Plefte(nene)*Plefte(nden)  &
+              &         +0.5d0*Plefte(nden)*(   &
+     &                     +Plefte(nve1)**2  &
+     &                     +Plefte(nve2)**2  &
+     &                     +Plefte(nve3)**2) &
+     &                     +Plefte(npre) )*Plefte(nve2)
+         leftco(mcsp)= Plefte(ncsp)
+         leftco(mvel)= Plefte(nve2)
+         leftco(mpre)= Plefte(npre)
 
-       enddo
-       enddo  
+     
+! | Pleftc1   | Pleftc2 |<= Prigtc1   | Prigtc2   |        
+!                     You are here  
+!====================
+! Right
+!====================
+         dsvp(:) = (Prigtc2(:) - Prigtc1(:)) 
+         dsvm(:) = (Prigtc1(:) - Pleftc2(:))
+         call vanLeer(dsvp,dsvm,dsv)
+         Prigte(:) = Prigtc1(:) - 0.5d0*dsv(:)
 
-      do i=is,ie
-      do j=js,je+1
-         leftco(mudn,i,j,k)=leftpr(nden,i,j,k)
-         leftco(muvw,i,j,k)=leftpr(nve1,i,j,k)*leftpr(nden,i,j,k)
-         leftco(muvu,i,j,k)=leftpr(nve2,i,j,k)*leftpr(nden,i,j,k) ! rho v
-         leftco(muvv,i,j,k)=leftpr(nve3,i,j,k)*leftpr(nden,i,j,k)
-         leftco(muet,i,j,k)=leftpr(nene,i,j,k)*leftpr(nden,i,j,k) &
-     &               +0.5d0*leftpr(nden,i,j,k)*(  &
-     &                     +leftpr(nve1,i,j,k)**2 &
-     &                     +leftpr(nve2,i,j,k)**2 &
-     &                     +leftpr(nve3,i,j,k)**2)
+         rigtco(mudn)=Prigte(nden)
+         rigtco(muvw)=Prigte(nve1)*Prigte(nden)
+         rigtco(muvu)=Prigte(nve2)*Prigte(nden)   ! rho v
+         rigtco(muvv)=Prigte(nve3)*Prigte(nden)
+         rigtco(muet)=Prigte(nene)*Prigte(nden) & ! internal
+     &               +0.5d0*Prigte(nden)*(                  &
+     &                     +Prigte(nve1)**2                 &
+     &                     +Prigte(nve2)**2                 &
+     &                     +Prigte(nve3)**2)
 
-         leftco(mfdn,i,j,k)=leftpr(nden,i,j,k)                   *leftpr(nve2,i,j,k) ! rho v
-         leftco(mfvw,i,j,k)=leftpr(nden,i,j,k)*leftpr(nve1,i,j,k)*leftpr(nve2,i,j,k)
-         leftco(mfvu,i,j,k)=leftpr(nden,i,j,k)*leftpr(nve2,i,j,k)*leftpr(nve2,i,j,k) &
-     &                     +leftpr(npre,i,j,k)
-         leftco(mfvv,i,j,k)=leftpr(nden,i,j,k)*leftpr(nve3,i,j,k)*leftpr(nve2,i,j,k)
-         leftco(mfet,i,j,k)=(leftpr(nene,i,j,k)*leftpr(nden,i,j,k) &
-     &               +0.5d0*leftpr(nden,i,j,k)*(   &
-     &                     +leftpr(nve1,i,j,k)**2  &
-     &                     +leftpr(nve2,i,j,k)**2  &
-     &                     +leftpr(nve3,i,j,k)**2) &
-     &                     +leftpr(npre,i,j,k)     &
-     &                                       )*leftpr(nve2,i,j,k)
-
-         leftco(mcsp,i,j,k)= leftpr(ncsp,i,j,k)
-         leftco(mvel,i,j,k)= leftpr(nve2,i,j,k)
-         leftco(mpre,i,j,k)= leftpr(npre,i,j,k)
-
-
-         rigtco(mudn,i,j,k)=rigtpr(nden,i,j,k)
-         rigtco(muvw,i,j,k)=rigtpr(nve1,i,j,k)*rigtpr(nden,i,j,k)
-         rigtco(muvu,i,j,k)=rigtpr(nve2,i,j,k)*rigtpr(nden,i,j,k)
-         rigtco(muvv,i,j,k)=rigtpr(nve3,i,j,k)*rigtpr(nden,i,j,k)
-         rigtco(muet,i,j,k)=rigtpr(nene,i,j,k)*rigtpr(nden,i,j,k) &
-     &               +0.5d0*rigtpr(nden,i,j,k)*(   &
-     &                     +rigtpr(nve1,i,j,k)**2  &
-     &                     +rigtpr(nve2,i,j,k)**2  &
-     &                     +rigtpr(nve3,i,j,k)**2)
-
-         rigtco(mfdn,i,j,k)=rigtpr(nden,i,j,k)                   *rigtpr(nve2,i,j,k)
-         rigtco(mfvw,i,j,k)=rigtpr(nden,i,j,k)*rigtpr(nve1,i,j,k)*rigtpr(nve2,i,j,k)
-         rigtco(mfvu,i,j,k)=rigtpr(nden,i,j,k)*rigtpr(nve2,i,j,k)*rigtpr(nve2,i,j,k) &
-     &                     +rigtpr(npre,i,j,k)
-         rigtco(mfvv,i,j,k)=rigtpr(nden,i,j,k)*rigtpr(nve3,i,j,k)*rigtpr(nve2,i,j,k)
-         rigtco(mfet,i,j,k)=(rigtpr(nene,i,j,k)*rigtpr(nden,i,j,k) &
-     &               +0.5d0*rigtpr(nden,i,j,k)*(   &
-     &                     +rigtpr(nve1,i,j,k)**2  &
-     &                     +rigtpr(nve2,i,j,k)**2  &
-     &                     +rigtpr(nve3,i,j,k)**2) &
-     &                     +rigtpr(npre,i,j,k)     &
-     &                                       )*rigtpr(nve2,i,j,k)
-
-         rigtco(mcsp,i,j,k)= rigtpr(ncsp,i,j,k)
-         rigtco(mvel,i,j,k)= rigtpr(nve2,i,j,k)
-         rigtco(mpre,i,j,k)= rigtpr(npre,i,j,k)
-
-      enddo
-      enddo
-
-      do i=is,ie
-      do j=js,je+1
-         leftst(:)=leftco(:,i,j,k)
-         rigtst(:)=rigtco(:,i,j,k)
-!         call HLLE(leftst,rigtst,nflux)
-         call HLLC(leftst,rigtst,nflux)
+         rigtco(mfdn)=Prigte(nden)             *Prigte(nve2) ! rho v
+         rigtco(mfvw)=Prigte(nden)*Prigte(nve1)*Prigte(nve2)
+         rigtco(mfvu)=Prigte(nden)*Prigte(nve2)*Prigte(nve2)+Prigte(npre)
+         rigtco(mfvv)=Prigte(nden)*Prigte(nve3)*Prigte(nve2)
+         rigtco(mfet)=(Prigte(nene)*Prigte(nden)  &
+              &         +0.5d0*Prigte(nden)*(   &
+     &                     +Prigte(nve1)**2  &
+     &                     +Prigte(nve2)**2  &
+     &                     +Prigte(nve3)**2) &
+     &                     +Prigte(npre) )*Prigte(nve2)
+         rigtco(mcsp)= Prigte(ncsp)
+         rigtco(mvel)= Prigte(nve2)
+         rigtco(mpre)= Prigte(npre)
+         !call HLLE(leftco,rigtco,nflux)
+         call HLLC(leftco,rigtco,nflux)
          nflux2(mden,i,j,k)=nflux(mden)
          nflux2(mrv1,i,j,k)=nflux(mrvw)
-         nflux2(mrv2,i,j,k)=nflux(mrvu) ! mrv2=3, mrvu=2
+         nflux2(mrv2,i,j,k)=nflux(mrvu)! mrv2=3, mrvu=2
          nflux2(mrv3,i,j,k)=nflux(mrvv)
          nflux2(meto,i,j,k)=nflux(meto)
       enddo
-      enddo
-
+      enddo   
+!$omp end parallel do
+  
       return
       end subroutine Numericalflux2
 
@@ -862,6 +862,7 @@ end module eosmod
       implicit none
       integer :: i,j,k,n
 
+!$omp parallel do collapse(3)
       do k=ks,ke
       do j=js,je
       do i=is,ie+1
@@ -876,7 +877,9 @@ end module eosmod
       enddo
       enddo
       enddo
+!$omp end parallel do
 
+!$omp parallel do collapse(3)
       do k=ks,ke
       do i=is,ie
       do j=js,je+1
@@ -891,7 +894,8 @@ end module eosmod
       enddo
       enddo
       enddo
-
+!$omp end parallel do
+      
        grvsrc3(:,:,:) = 0.0d0
 
       return
@@ -902,7 +906,8 @@ end module eosmod
       use fluxmod
       implicit none
       integer::i,j,k
-
+      
+!$omp parallel do collapse(3)
       do k=ks,ke
       do j=js,je
       do i=is,ie
@@ -952,7 +957,7 @@ end module eosmod
       enddo
       enddo
       enddo
-
+!$omp end parallel do
       return
       end subroutine UpdateConsv
 
