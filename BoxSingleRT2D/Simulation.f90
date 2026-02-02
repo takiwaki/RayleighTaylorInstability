@@ -291,6 +291,7 @@ end module eosmod
       use eosmod
       implicit none
       integer::i,j,k
+!$omp parallel do collapse(3)
       do k=ks,ke
       do j=js,je
       do i=is,ie
@@ -313,7 +314,7 @@ end module eosmod
       enddo
       enddo
       enddo
-
+!$omp end parallel do
       return
       end subroutine PrimVariable
 
