@@ -536,7 +536,7 @@
       enddo
       enddo
       enddo
-!$end omp parallel
+!$omp end parallel do
       
       return
       end subroutine Consvvariable
@@ -582,7 +582,7 @@
       enddo
       enddo
       enddo
-!$end omp parallel
+!$omp end parallel do
 
       return
       end subroutine PrimVariable
@@ -614,7 +614,7 @@
       enddo
       enddo
       enddo
-!$end omp parallel
+!$omp end parallel do
 
       dt = Cour * dtmin
 !      write(6,*)"dt",dt
@@ -681,7 +681,7 @@
       enddo
       enddo
       enddo
-!$end omp parallel
+!$omp end parallel do
 
 
       return
@@ -905,7 +905,7 @@
          nflux1(meto+1:mflx,i,j,k)=nfluxe(meto+1:mflx)*shock + (1.0d0-shock)*nfluxc(meto+1:mflx)
       enddo
       enddo
-!$end omp parallel
+!$omp end parallel do
       return
       end subroutine Numericalflux1
     
@@ -1078,7 +1078,7 @@
          nflux2(meto+1:mflx,i,j,k)=nfluxe(meto+1:mflx)*shock + (1.0d0-shock)*nfluxc(meto+1:mflx)
       enddo
       enddo   
-!$end omp parallel
+!$omp end parallel do
       
       return
       end subroutine Numericalflux2
