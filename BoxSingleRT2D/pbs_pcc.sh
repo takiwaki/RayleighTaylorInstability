@@ -4,6 +4,7 @@
 #PBS -m n
 #PBS -l select=1:ncpus=4
 #PBS -l walltime=00:30:00
+#PBS -j oe
 
 module load intel/2024
 
