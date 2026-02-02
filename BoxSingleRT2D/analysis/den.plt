@@ -2,10 +2,10 @@
 # initialize
 ######################
 
-set tmargin 0
-set bmargin 0
-set lmargin 0
-set rmargin 0
+set tmargin at screen 0.86
+set bmargin at screen 0.08
+set lmargin at screen 0.22
+set rmargin at screen 0.86
 
 set view map
 unset key
@@ -40,17 +40,16 @@ time   = system(command)
 print "time= ".time
 
 # Position of color bar
-set colorbox horizontal user origin 0.3, 0.87 size 0.4, 0.04
+set colorbox horizontal user origin 0.33, 0.87 size 0.4, 0.04
 #set cbtics 1.0
-set cbtics offset 0,3.2
+set cbtics offset 0,3.0
 
 set size 1.0
 
-set origin 0.05,0.0
-set xlabel "X" offset 0,0
-set xtics 0.25
-set ylabel "Y" offset 0,0
-set ytics 0.25
+set xlabel "X" offset 0,2.5
+set xtics 0.25 offset 0,2.0
+set ylabel "Y" offset 0.0,0
+set ytics 0.25 offset -1.5,0.0
 
 set xrange [-0.25:0.25]
 set yrange [-0.75:0.75]
@@ -65,7 +64,7 @@ set yrange [-0.75:0.75]
 #set cbrange [-maxcb:maxcb]
 set cbtics 1.0
 set cbrange [*:*]
-set cbrange [0.9:2.1]
+set cbrange [1.0:2.0]
 
 ofname = sprintf("figures/den%05d.png",ifnum)
 set output ofname
