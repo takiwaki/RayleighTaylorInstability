@@ -6,7 +6,8 @@ program main
   implicit none
   real(8)::time_begin,time_end
   logical::is_final
-  logical,parameter::nooutput=.true.
+  logical,parameter::nooutput=.false.
+  logical,parameter:: forceoutput=.true., usualoutput=.false.
   data is_final /.false./
   call InitializeMPI
   if(myid_w == 0) print *, "setup grids and fields"
@@ -33,7 +34,7 @@ program main
      call DampPsi
      call PrimVariable
      time=time+dt
-     if(.not. nooutput ) call Output(.false.)
+     if(.not. nooutput ) call Output(usualoutput)
      if(time > timemax) exit mloop
   enddo mloop
 
@@ -43,7 +44,7 @@ program main
   if(myid_w == 0) print *, "time/count/cell", (time_end-time_begin)/(ngrid1*ngrid2*ngrid3)/nhymax
   
   is_final = .true.
-  call Output(.true.)
+  call Output(forceoutput)
 
   call FinalizeMPI
   if(myid_w == 0) print *, "program has been finished"
