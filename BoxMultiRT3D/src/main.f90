@@ -153,20 +153,24 @@ subroutine GenerateProblem
      pb1d(i) = 0.5d0*(pa1d(i+1)+pa1d(i))
   enddo
   
-  do k=ks,ke
-  do j=js,je
-  do i=is,ie
+  do k=ks-mgn,ke+mgn
+  do j=js-mgn,je+mgn
+  do i=is-mgn,ie+mgn
      d(i,j,k) = d1d(i)
      p(i,j,k) = pb1d(i)
      v1(i,j,k) = 0.0d0
      v2(i,j,k) = 0.0d0
      v3(i,j,k) = 0.0d0
+     b1(i,j,k) = 0.0d0
+     b2(i,j,k) = 0.0d0
+     b3(i,j,k) = 0.0d0
+     bp(i,j,k) = 0.0d0
   enddo
   enddo
   enddo
 
-  do k=ks,ke
-  do j=js,je
+  do k=ks-mgn,ke+mgn
+  do j=js-mgn,je+mgn
   do i=1,in-1
      gp(i,j,k) = -GRA*x1b(i)
   enddo

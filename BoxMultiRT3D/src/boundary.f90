@@ -211,50 +211,96 @@ subroutine XbcSendRecv(varsendXstt,varsendXend,varrecvXstt,varrecvXend)
   real(8),dimension(mgn,jn,kn,nbc),intent(out)::varrecvXstt,varrecvXend
   integer::i,j,k,n
   
-  if(ntiles(1) == 1) then
+  single: if(ntiles(1) == 1) then
 !$acc kernels
 !$acc loop collapse(4) independent
   do n=1,nbc
   do k=1,kn-1
   do j=1,jn-1
   do i=1,mgn
-     varrecvXstt(i,j,k,n) = varsendXend(i,j,k,n)
-     varrecvXend(i,j,k,n) = varsendXstt(i,j,k,n)
+     ! reflection
+     varrecvXstt(i,j,k,n) = varsendXstt(mgn-i+1,j,k,n)
+     varrecvXend(i,j,k,n) = varsendXend(mgn-i+1,j,k,n)
+     ! periodic
+     !     varrecvXstt(i,j,k,n) = varsendXend(i,j,k,n)
+     !     varrecvXend(i,j,k,n) = varsendXstt(i,j,k,n)
+      varrecvXstt(i,j,k,3) = -varrecvXstt(i,j,k,3)  ! v1
+      varrecvXend(i,j,k,3) = -varrecvXend(i,j,k,3)  ! v1
   enddo
   enddo
   enddo
   enddo
 !$acc end kernels
   
-  else
+  else ! single
 
-!$acc host_data use_device(varsendXstt,varsendXend,varrecvXstt,varrecvXend)
+  n1mdir: if (n1m /= MPI_PROC_NULL) then
+!$acc host_data use_device(varsendXstt,varrecvXstt)
      nreq = nreq + 1         
      call MPI_IRECV(varrecvXstt,mgn*jn*kn*nbc &
     & , MPI_DOUBLE &
     & , n1m,1100, comm3d, req(nreq), ierr)
-
+     
      nreq = nreq + 1
      call MPI_ISEND(varsendXstt,mgn*jn*kn*nbc &
     & , MPI_DOUBLE &
     & , n1m, 1200, comm3d, req(nreq), ierr)
+!$acc end host_data
+  else !n1dir
 
+!$acc kernels
+!$acc loop collapse(4) independent
+  do n=1,nbc
+  do k=1,kn-1
+  do j=1,jn-1
+  do i=1,mgn
+     ! reflection
+     varrecvXstt(i,j,k,n) = varsendXstt(mgn-i+1,j,k,n)
+     varrecvXstt(i,j,k,3) = -varrecvXstt(i,j,k,3)  ! v1
+  enddo
+  enddo
+  enddo
+  enddo
+!$acc end kernels
+     
+  endif n1mdir
+  
+  n1pdir: if (n1p /= MPI_PROC_NULL) then
+!$acc host_data use_device(varsendXend,varrecvXend)
      nreq = nreq + 1
      call MPI_IRECV(varrecvXend,mgn*jn*kn*nbc &
     & , MPI_DOUBLE &
     & , n1p,1200, comm3d, req(nreq), ierr)
-
+     
      nreq = nreq + 1
      call MPI_ISEND(varsendXend,mgn*jn*kn*nbc &
     & , MPI_DOUBLE &
     & , n1p, 1100, comm3d, req(nreq), ierr)
-
-     if(nreq .ne. 0) call MPI_WAITALL ( nreq, req, stat, ierr )
-     nreq = 0
 !$acc end host_data
+     
+  else ! n1pdir
+     
+!$acc kernels
+!$acc loop collapse(4) independent
+  do n=1,nbc
+  do k=1,kn-1
+  do j=1,jn-1
+  do i=1,mgn
+     ! reflection
+     varrecvXend(i,j,k,n) = varsendXend(mgn-i+1,j,k,n)
+     varrecvXend(i,j,k,3) = -varrecvXend(i,j,k,3) ! v1   
+  enddo
+  enddo
+  enddo
+  enddo
+!$acc end kernels
+  endif n1pdir
 
-  endif
-
+  endif single
+  
+  if(nreq .ne. 0) call MPI_WAITALL ( nreq, req, stat, ierr )
+  nreq = 0
+  
   return
 end subroutine XbcSendRecv
 

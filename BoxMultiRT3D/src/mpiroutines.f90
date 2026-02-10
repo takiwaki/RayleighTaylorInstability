@@ -36,7 +36,7 @@ subroutine InitializeMPI
   ntiles(1)=1
   ntiles(2)=2
   ntiles(3)=2
-  periodic(1)=.true.
+  periodic(1)=.false.
   periodic(2)=.true.
   periodic(3)=.true.
   if(myid_w == 0) then
