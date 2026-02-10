@@ -58,14 +58,14 @@ contains
 ! 1D GRID PREPARE
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!    
     init1D: if(.not. is_inited )then
-       Asize(1) = nvarg
-       Ssize(1) = nvarg
-       Start(1) = 0
+       Asize(2) = nvarg
+       Ssize(2) = nvarg
+       Start(2) = 0
        
-       Asize(2) = ntotal(1)+1 ! total izones + edge
-       Ssize(2) = npart(1) ! izones in 1 process
+       Asize(1) = ntotal(1)+1 ! total izones + edge
+       Ssize(1) = npart(1) ! izones in 1 process
        if(coords(1) .eq. ntiles(1)-1)Ssize(2)=Ssize(2)+1  ! + edge
-       Start(2) = npart(1) * coords(1)
+       Start(1) = npart(1) * coords(1)
               
        call MPI_TYPE_CREATE_SUBARRAY( &
      & 2, & ! dimension of array
@@ -113,14 +113,14 @@ contains
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 
    init2D: if(.not. is_inited )then
-      Asize(1) = nvarg
-      Ssize(1) = nvarg
-      Start(1) = 0
+      Asize(2) = nvarg
+      Ssize(2) = nvarg
+      Start(2) = 0
       
-      Asize(2) = ntotal(2)+1 ! total jzones + edge
-      Ssize(2) = npart(2)    ! jzones in 1 process
+      Asize(1) = ntotal(2)+1 ! total jzones + edge
+      Ssize(1) = npart(2)    ! jzones in 1 process
       if(coords(2) .eq. ntiles(2)-1)Ssize(2)=Ssize(2)+1  ! + edge
-      Start(2) = npart(2) * coords(2)
+      Start(1) = npart(2) * coords(2)
       call MPI_TYPE_CREATE_SUBARRAY(&
      & 2, & ! dimension of array
      & Asize,Ssize,Start,&
@@ -161,13 +161,15 @@ contains
    endif init2D
       
    init3D: if(.not. is_inited )then
-      Asize(1) = nvarg
-      Ssize(1) = nvarg
-      Start(1) = 0
-      Asize(2) = ntotal(3)+1  ! total kzones+edge
-      Ssize(2) = npart(3) ! kzones in 1 process
+      Asize(1) = ntotal(3)+1  ! total kzones+edge
+      Ssize(1) = npart(3) ! kzones in 1 process
+
+      Asize(2) = nvarg
+      Ssize(2) = nvarg
+      Start(2) = 0
+      
       if(coords(3) .eq. ntiles(3)-1)Ssize(2)=Ssize(2)+1  ! + edge
-      Start(2) = npart(3) * coords(3)
+      Start(1) = npart(3) * coords(3)
       call MPI_TYPE_CREATE_SUBARRAY(&
      & 2, & ! dimension of array
      & Asize,Ssize,Start, &
@@ -210,18 +212,19 @@ contains
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 ! DATA PREPARE
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-       Asize(1) = nvars
-       Ssize(1) = nvars
-       Start(1) = 0 
-       Asize(2) = ntotal(1) ! total zones for 1D 
-       Asize(3) = ntotal(2) ! total zones for 2D
-       Asize(4) = ntotal(3) ! total zones for 3D
-       Ssize(2) =  npart(1) ! partial zones in 1 process 
-       Ssize(3) =  npart(2) ! partial zones in 1 process 
-       Ssize(4) =  npart(3) ! partial zones in 1 process 
-       Start(2) =  npart(1) * coords(1)
-       Start(3) =  npart(2) * coords(2)
-       Start(4) =  npart(3) * coords(3)
+       Asize(1) = ntotal(1) ! total zones for 1D 
+       Asize(2) = ntotal(2) ! total zones for 2D
+       Asize(3) = ntotal(3) ! total zones for 3D
+       Ssize(1) =  npart(1) ! partial zones in 1 process 
+       Ssize(2) =  npart(2) ! partial zones in 1 process 
+       Ssize(3) =  npart(3) ! partial zones in 1 process 
+       Start(1) =  npart(1) * coords(1)
+       Start(2) =  npart(2) * coords(2)
+       Start(3) =  npart(3) * coords(3)
+       
+       Asize(4) = nvars
+       Ssize(4) = nvars
+       Start(4) = 0 
 
        call MPI_TYPE_CREATE_SUBARRAY(&
      & 4, &! dimension of array
@@ -313,11 +316,11 @@ subroutine Output(is_final)
      nvarg = 2 !! number of the variables for grid
      nvars = 10!! number of the variables for variable
      
-     allocate(gridX(nvarg,1:iee-is+1))
-     allocate(gridY(nvarg,1:jee-js+1))
-     allocate(gridZ(nvarg,1:kee-ks+1))
+     allocate(gridX(1:iee-is+1,nvarg))
+     allocate(gridY(1:jee-js+1,nvarg))
+     allocate(gridZ(1:kee-ks+1,nvarg))
 
-     allocate(data3D(nvars,ngrid1,ngrid2,ngrid3))
+     allocate(data3D(ngrid1,ngrid2,ngrid3,nvars))
      
      call makedirs(dirname)
      is_inited =.true.
@@ -338,26 +341,26 @@ subroutine Output(is_final)
   close(unitout)
   endif
 
-  gridX(1,1:iee-is+1) = x1b(is:iee) !! the final grid point is not necessary but outputed.  
-  gridX(2,1:iee-is+1) = x1a(is:iee) !! the final grid is necessary. 
+  gridX(1:iee-is+1,1) = x1b(is:iee) !! the final grid point is not necessary but outputed.  
+  gridX(1:iee-is+1,2) = x1a(is:iee) !! the final grid is necessary. 
   
-  gridY(1,1:jee-js+1) = x2b(js:jee) !! the final grid point is not necessary but outputed.
-  gridY(2,1:jee-js+1) = x2a(js:jee) !! the final grid is necessary.
+  gridY(1:jee-js+1,1) = x2b(js:jee) !! the final grid point is not necessary but outputed.
+  gridY(1:jee-js+1,2) = x2a(js:jee) !! the final grid is necessary.
 
-  gridZ(1,1:kee-ks+1) = x3b(ks:kee) !! the final grid point is not necessary but outputed.
-  gridZ(2,1:kee-ks+1) = x3a(ks:kee) !! the final grid is necessary.
+  gridZ(1:kee-ks+1,1) = x3b(ks:kee) !! the final grid point is not necessary but outputed.
+  gridZ(1:kee-ks+1,2) = x3a(ks:kee) !! the final grid is necessary.
 
   !> The cell center value 
-  data3D( 1,1:npart(1),1:npart(2),1:npart(3)) =  d(is:ie,js:je,ks:ke)
-  data3D( 2,1:npart(1),1:npart(2),1:npart(3)) = v1(is:ie,js:je,ks:ke)
-  data3D( 3,1:npart(1),1:npart(2),1:npart(3)) = v2(is:ie,js:je,ks:ke)
-  data3D( 4,1:npart(1),1:npart(2),1:npart(3)) = v3(is:ie,js:je,ks:ke)
-  data3D( 5,1:npart(1),1:npart(2),1:npart(3)) = b1(is:ie,js:je,ks:ke)
-  data3D( 6,1:npart(1),1:npart(2),1:npart(3)) = b2(is:ie,js:je,ks:ke)
-  data3D( 7,1:npart(1),1:npart(2),1:npart(3)) = b3(is:ie,js:je,ks:ke)
-  data3D( 8,1:npart(1),1:npart(2),1:npart(3)) = bp(is:ie,js:je,ks:ke)
-  data3D( 9,1:npart(1),1:npart(2),1:npart(3)) =  p(is:ie,js:je,ks:ke)
-  data3D(10,1:npart(1),1:npart(2),1:npart(3)) = gp(is:ie,js:je,ks:ke)
+  data3D(1:npart(1),1:npart(2),1:npart(3), 1) =  d(is:ie,js:je,ks:ke)
+  data3D(1:npart(1),1:npart(2),1:npart(3), 2) = v1(is:ie,js:je,ks:ke)
+  data3D(1:npart(1),1:npart(2),1:npart(3), 3) = v2(is:ie,js:je,ks:ke)
+  data3D(1:npart(1),1:npart(2),1:npart(3), 4) = v3(is:ie,js:je,ks:ke)
+  data3D(1:npart(1),1:npart(2),1:npart(3), 5) = b1(is:ie,js:je,ks:ke)
+  data3D(1:npart(1),1:npart(2),1:npart(3), 6) = b2(is:ie,js:je,ks:ke)
+  data3D(1:npart(1),1:npart(2),1:npart(3), 7) = b3(is:ie,js:je,ks:ke)
+  data3D(1:npart(1),1:npart(2),1:npart(3), 8) = bp(is:ie,js:je,ks:ke)
+  data3D(1:npart(1),1:npart(2),1:npart(3), 9) =  p(is:ie,js:je,ks:ke)
+  data3D(1:npart(1),1:npart(2),1:npart(3),10) = gp(is:ie,js:je,ks:ke)
 
   if(myid_w==0) print *, "output:",nout,time
 
