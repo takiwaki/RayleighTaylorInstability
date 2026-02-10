@@ -16,6 +16,7 @@ program main
   call GenerateGrid
   call GenerateProblem
   call ConsvVariable
+  call Output(forceoutput)  
   if(myid_w == 0) print *, "entering main loop"
 ! main loop
   if(myid_w == 0 .and. .not. nooutput )                        print *,"step ","time ","dt"
@@ -185,10 +186,10 @@ subroutine GenerateProblem
   call random_seed(PUT=seed(1:2))
   
 ! pert
-  do k=ks,ke
   do j=js,je
   do i=is,ie
-     call random_number(rnum)      
+     call random_number(rnum)     
+  do k=ks,ke 
      v1(i,j,k)= rrv*(rnum(1)-0.5d0) &
      & *(1.0d0+cos(2.0d0*pi*(x1b(i)-(x1max+x1min)/2.0d0)/(x1max-x1min)))
   enddo
