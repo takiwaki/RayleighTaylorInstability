@@ -12,7 +12,6 @@ module mpiiomod
   integer,dimension(3):: ntotal
   integer,dimension(3):: npart
   integer:: nvars,nvarg
-  character(len= 2),parameter :: id ="DT"
   character(len=10),parameter :: datadir="bindata/"
     
   real(8),dimension(:,:),allocatable:: gridX, gridY, gridZ
@@ -21,9 +20,9 @@ module mpiiomod
   public:: nvars,nvarg
   
   public:: gridX,gridY,gridZ,data3D
-  public:: MPIOutputBindary
+  public:: MPI_IO_PACK, MPI_IO_WRITE
 contains  
-  subroutine MPIOutputBindary(timeid)
+  subroutine MPI_IO_WRITE(timeid)
     use mpimod
     implicit NONE
     integer,intent(in) :: timeid
@@ -82,7 +81,7 @@ contains
       call MPI_COMM_SPLIT(comm3d,color,key,commG1D,ierr)
       
       color1D: if(color == 0) then
-      write(usrfile,"(a3,a2)")'g1d',id
+      write(usrfile,"(A)")'grid1d.bin'
       fpathbin = trim(datadir)//usrfile
       call MPI_FILE_OPEN(commG1D, &
      &                         fpathbin, &  ! file path
@@ -135,7 +134,7 @@ contains
       call MPI_COMM_SPLIT(comm3d,color,key,commG2D,ierr)
       
       color2D: if(color == 0) then
-      write(usrfile,"(a3,a2)")'g2d',id
+      write(usrfile,"(A)")'grid2d.bin'
       fpathbin = trim(datadir)//usrfile
  
       call MPI_FILE_OPEN(commG2D, &
@@ -183,7 +182,7 @@ contains
       key   =  coords(3)
       call MPI_COMM_SPLIT(comm3d,color,key,commG3D,ierr)
       color3D: if (color == 0) then
-      write(usrfile,"(a3,a2)")'g3d',id
+      write(usrfile,"(A)")'grid3d.bin'
       fpathbin = trim(datadir)//usrfile
       
       call MPI_FILE_OPEN(commG3D,&
@@ -240,7 +239,7 @@ contains
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 ! DATA WRITE
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-    write(usrfile,"(a3,a2,a1,i5.5)")'d3d',id,'.',timeid
+    write(usrfile,"(a5,a1,i5.5,a4)")'field','.',timeid,".bin"
     fpathbin = trim(datadir)//usrfile
     
       call MPI_FILE_OPEN(MPI_COMM_WORLD, &
@@ -266,112 +265,174 @@ contains
       is_inited = .true.
 
       return
-    end subroutine MPIOutputBindary
-  end module mpiiomod
+    end subroutine MPI_IO_WRITE
+  
+    subroutine MPI_IO_PACK(nout)
+      !! Output the grid and variables.
+      !! The grid data contain the information of cell center and cell edge.
+      !! The variable data contains that of  cell center.
+      use basicmod
+      use mpimod
+      implicit none
+      integer::i,j,k
+      integer,intent(in):: nout
+      integer::iee,jee,kee
+      character(20),parameter::dirname="bindata/"
+      character(40)::filename
+      integer,parameter::unitout=17
+      integer,parameter:: gs=1
+      integer,parameter:: nvar=10
+      
+      logical, save:: is_inited
+      data is_inited /.false./
+
+
+      iee = ie
+      jee = je
+      kee = ke
+  
+      !> Include the information of the cell edge!
+      if(coords(1) .eq. ntiles(1)-1) iee = ie+1
+      if(coords(2) .eq. ntiles(2)-1) jee = je+1
+      if(coords(3) .eq. ntiles(3)-1) kee = ke+1
+  
+      if (.not. is_inited) then
+         npart(1) = ngrid1
+         npart(2) = ngrid2
+         npart(3) = ngrid3
+  
+         ntotal(1) = ngrid1*ntiles(1)
+         ntotal(2) = ngrid2*ntiles(2)
+         ntotal(3) = ngrid3*ntiles(3)
+     
+         nvarg = 2 !! number of the variables for grid
+         nvars = 10!! number of the variables for variable
+     
+         allocate(gridX(1:iee-is+1,nvarg))
+         allocate(gridY(1:jee-js+1,nvarg))
+         allocate(gridZ(1:kee-ks+1,nvarg))
+
+         allocate(data3D(ngrid1,ngrid2,ngrid3,nvars))
+         
+         call makedirs(dirname)
+         is_inited =.true.
+      endif
+      
+      !> Information of meta data.
+      if(myid_w == 0)then
+         write(filename,'(a3,i5.5,a4)')"unf",nout,".dat"
+         filename = trim(dirname)//filename
+         
+         open(unitout,file=filename,status='replace',form='formatted')
+         write(unitout,'(a2,2(1x,E12.3))') "# ",time,dt
+         write(unitout,'(a2,1x,i5)') "# ",ngrid1*ntiles(1)
+         write(unitout,'(a2,1x,i5)') "# ",ngrid2*ntiles(2)
+         write(unitout,'(a2,1x,i5)') "# ",ngrid3*ntiles(3)
+         close(unitout)
+      endif
+      
+      gridX(1:iee-is+1,1) = x1b(is:iee) !! the final grid point is not necessary but outputed.  
+      gridX(1:iee-is+1,2) = x1a(is:iee) !! the final grid is necessary. 
+      
+      gridY(1:jee-js+1,1) = x2b(js:jee) !! the final grid point is not necessary but outputed.
+      gridY(1:jee-js+1,2) = x2a(js:jee) !! the final grid is necessary.
+      
+      gridZ(1:kee-ks+1,1) = x3b(ks:kee) !! the final grid point is not necessary but outputed.
+      gridZ(1:kee-ks+1,2) = x3a(ks:kee) !! the final grid is necessary.
+
+      !> The cell center value 
+      data3D(1:npart(1),1:npart(2),1:npart(3), 1) =  d(is:ie,js:je,ks:ke)
+      data3D(1:npart(1),1:npart(2),1:npart(3), 2) = v1(is:ie,js:je,ks:ke)
+      data3D(1:npart(1),1:npart(2),1:npart(3), 3) = v2(is:ie,js:je,ks:ke)
+      data3D(1:npart(1),1:npart(2),1:npart(3), 4) = v3(is:ie,js:je,ks:ke)
+      data3D(1:npart(1),1:npart(2),1:npart(3), 5) = b1(is:ie,js:je,ks:ke)
+      data3D(1:npart(1),1:npart(2),1:npart(3), 6) = b2(is:ie,js:je,ks:ke)
+      data3D(1:npart(1),1:npart(2),1:npart(3), 7) = b3(is:ie,js:je,ks:ke)
+      data3D(1:npart(1),1:npart(2),1:npart(3), 8) = bp(is:ie,js:je,ks:ke)
+      data3D(1:npart(1),1:npart(2),1:npart(3), 9) =  p(is:ie,js:je,ks:ke)
+      data3D(1:npart(1),1:npart(2),1:npart(3),10) = gp(is:ie,js:je,ks:ke)
+
+      
+      return
+      !         write(6,*) "bpf2",nflux2(mbps,i,j,k)
+    end subroutine MPI_IO_PACK    
+end module mpiiomod
       
 subroutine Output(is_final)
-  !! Output the grid and variables.
-  !! The grid data contain the information of cell center and cell edge.
-  !! The variable data contains that of  cell center.
+  use mpimod
   use basicmod
   use mpiiomod
-  use mpimod
   implicit none
-  integer::i,j,k
-  integer::iee,jee,kee
-  character(20),parameter::dirname="bindata/"
-  character(40)::filename
-  real(8),save::tout
-  data tout / 0.0d0 /
-  integer::nout
-  data nout / 1 /
-  integer,parameter::unitout=17
-  integer,parameter:: gs=1
-  integer,parameter:: nvar=10
 
   logical, intent(in):: is_final
 
+  real(8),save:: tout
+  data tout / 0.0d0 /
+  integer,save:: nout
+  data nout / 1 /
+  
   logical, save:: is_inited
   data is_inited /.false./
-
-
-  iee = ie
-  jee = je
-  kee = ke
   
-  !> Include the information of the cell edge!
-  if(coords(1) .eq. ntiles(1)-1) iee = ie+1
-  if(coords(2) .eq. ntiles(2)-1) jee = je+1
-  if(coords(3) .eq. ntiles(3)-1) kee = ke+1
+  logical,parameter:: binaryout= .false.
+
+
+  if(time .lt. tout+dtout .and. .not. is_final) return
+  if(binaryout) then
+     call MPI_IO_PACK(nout)
+     call MPI_IO_WRITE(nout)
+  else
+     call ASC_WRITE(nout)
+  endif
+  
+  if(myid_w==0) print *, "output:",nout,time
+          
+  nout=nout+1
+  tout=time
+  
+  return
+  !         write(6,*) "bpf2",nflux2(mbps,i,j,k)
+end subroutine Output
+
+
+subroutine ASC_WRITE(nout)
+  use mpimod
+  use basicmod
+  implicit none
+  integer,intent(in):: nout
+  integer:: i,j,k
+  integer:: unitasc
+  character(len=10),parameter :: dirname="ascdata/"
+  character(40)::filename
+  logical,save :: is_inited
+  data is_inited / .false. /
   
   if (.not. is_inited) then
-     npart(1) = ngrid1
-     npart(2) = ngrid2
-     npart(3) = ngrid3
-  
-     ntotal(1) = ngrid1*ntiles(1)
-     ntotal(2) = ngrid2*ntiles(2)
-     ntotal(3) = ngrid3*ntiles(3)
-     
-     nvarg = 2 !! number of the variables for grid
-     nvars = 10!! number of the variables for variable
-     
-     allocate(gridX(1:iee-is+1,nvarg))
-     allocate(gridY(1:jee-js+1,nvarg))
-     allocate(gridZ(1:kee-ks+1,nvarg))
-
-     allocate(data3D(ngrid1,ngrid2,ngrid3,nvars))
-     
      call makedirs(dirname)
      is_inited =.true.
   endif
-
-  if(time .lt. tout+dtout .and. .not. is_final) return
-
-  !> Information of meta data.
-  if(myid_w == 0)then
-  write(filename,'(a3,i5.5,a4)')"unf",nout,".dat"
+    
+  write(filename,'(a4,i3.3,a1,i5.5,a4)')"snap",myid_w,"-",nout,".csv"
   filename = trim(dirname)//filename
-
-  open(unitout,file=filename,status='replace',form='formatted')
-  write(unitout,'(a2,2(1x,E12.3))') "# ",time,dt
-  write(unitout,'(a2,1x,i5)') "# ",ngrid1*ntiles(1)
-  write(unitout,'(a2,1x,i5)') "# ",ngrid2*ntiles(2)
-  write(unitout,'(a2,1x,i5)') "# ",ngrid3*ntiles(3)
-  close(unitout)
-  endif
-
-  gridX(1:iee-is+1,1) = x1b(is:iee) !! the final grid point is not necessary but outputed.  
-  gridX(1:iee-is+1,2) = x1a(is:iee) !! the final grid is necessary. 
-  
-  gridY(1:jee-js+1,1) = x2b(js:jee) !! the final grid point is not necessary but outputed.
-  gridY(1:jee-js+1,2) = x2a(js:jee) !! the final grid is necessary.
-
-  gridZ(1:kee-ks+1,1) = x3b(ks:kee) !! the final grid point is not necessary but outputed.
-  gridZ(1:kee-ks+1,2) = x3a(ks:kee) !! the final grid is necessary.
-
-  !> The cell center value 
-  data3D(1:npart(1),1:npart(2),1:npart(3), 1) =  d(is:ie,js:je,ks:ke)
-  data3D(1:npart(1),1:npart(2),1:npart(3), 2) = v1(is:ie,js:je,ks:ke)
-  data3D(1:npart(1),1:npart(2),1:npart(3), 3) = v2(is:ie,js:je,ks:ke)
-  data3D(1:npart(1),1:npart(2),1:npart(3), 4) = v3(is:ie,js:je,ks:ke)
-  data3D(1:npart(1),1:npart(2),1:npart(3), 5) = b1(is:ie,js:je,ks:ke)
-  data3D(1:npart(1),1:npart(2),1:npart(3), 6) = b2(is:ie,js:je,ks:ke)
-  data3D(1:npart(1),1:npart(2),1:npart(3), 7) = b3(is:ie,js:je,ks:ke)
-  data3D(1:npart(1),1:npart(2),1:npart(3), 8) = bp(is:ie,js:je,ks:ke)
-  data3D(1:npart(1),1:npart(2),1:npart(3), 9) =  p(is:ie,js:je,ks:ke)
-  data3D(1:npart(1),1:npart(2),1:npart(3),10) = gp(is:ie,js:je,ks:ke)
-
-  if(myid_w==0) print *, "output:",nout,time
-
-  call MPIOutputBindary(nout)
-      
-  nout=nout+1
-  tout=time
+    
+  k=ks
+  open(newunit=unitasc,file=filename,status='replace',form='formatted',access="write")
+  write(unitasc,'(a1,1x,2(1x,E12.3))') "#",time,dt
+  write(unitasc,'(a1,1x,i5)') "#",ie-is+1
+  write(unitasc,'(a1,1x,i5)') "#",je-js+1
+  write(unitasc,'(a1,1x,i5,1x,E13.3)') "#",k,x3b(k)
+  write(unitasc,'(A)') "# x y d vx vy p phi"
+  do j=js,je
+     do i=is,ie
+        write(unitasc,"(7(E13.3,1x))")x1b(i),x2b(j),d(i,j,k),v1(i,j,k),v2(i,j,k),p(i,j,k),gp(i,j,k)
+     enddo
+     write(unitasc,*) ""
+  enddo
+  close(unitasc)
+    
   return
-!         write(6,*) "bpf2",nflux2(mbps,i,j,k)
-end subroutine Output
-      
+end subroutine ASC_WRITE
+
 subroutine makedirs(outdir)
   implicit none
   character(len=*), intent(in) :: outdir
