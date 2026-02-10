@@ -416,11 +416,11 @@ subroutine ASC_WRITE(nout)
   filename = trim(dirname)//filename
     
   k=ks
-  open(newunit=unitasc,file=filename,status='replace',form='formatted',access="write")
-  write(unitasc,'(a1,1x,2(1x,E12.3))') "#",time,dt
-  write(unitasc,'(a1,1x,i5)') "#",ie-is+1
-  write(unitasc,'(a1,1x,i5)') "#",je-js+1
-  write(unitasc,'(a1,1x,i5,1x,E13.3)') "#",k,x3b(k)
+  open(newunit=unitasc,file=filename,status='replace',form='formatted')
+  write(unitasc,'((a1,1x),2(E12.3,1x))') "#",time,dt
+  write(unitasc,'((a1,1x),i5)') "#",ie-is+1
+  write(unitasc,'((a1,1x),i5)') "#",je-js+1
+  write(unitasc,'((a1,1x),(i5,1x),E13.3)') "#",k,x3b(k)
   write(unitasc,'(A)') "# x y d vx vy p phi"
   do j=js,je
      do i=is,ie
