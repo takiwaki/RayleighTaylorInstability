@@ -123,7 +123,11 @@ subroutine GenerateProblem
   data Rcenter / 0.0d0 /
   
   real(8)::d1d(in),pa1d(in),pb1d(in)
-
+  
+  integer,dimension(2) :: seed
+  real(8),dimension(1) :: rnum
+  real(8),parameter :: rrv =1.0d-2
+  
   real(8)::pi
   pi=acos(-1.0d0)
 
@@ -169,12 +173,19 @@ subroutine GenerateProblem
   enddo
   enddo
 
+
+  write(6,*) rrv*100.0d0 &
+       & , "% of Randam Perturbation imposed on velocity"
+  seed(1) = 1
+  seed(2) = 1
+  call random_seed(PUT=seed(1:2))
+  
 ! pert
   do k=ks,ke
   do j=js,je
   do i=is,ie
-     v1(i,j,k)= 0.01d0/4.0d0 &
-     & *(1.0d0+cos(2.0d0*pi*(x2b(j)-(x2max+x2min)/2.0d0)/(x2max-x2min))) &
+     call random_number(rnum)      
+     v1(i,j,k)= rrv*(rnum(1)-0.5d0) &
      & *(1.0d0+cos(2.0d0*pi*(x1b(i)-(x1max+x1min)/2.0d0)/(x1max-x1min)))
   enddo
   enddo

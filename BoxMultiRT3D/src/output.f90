@@ -64,7 +64,7 @@ contains
        
        Asize(1) = ntotal(1)+1 ! total izones + edge
        Ssize(1) = npart(1) ! izones in 1 process
-       if(coords(1) .eq. ntiles(1)-1)Ssize(2)=Ssize(2)+1  ! + edge
+       if(coords(1) .eq. ntiles(1)-1)Ssize(1)=Ssize(1)+1  ! + edge
        Start(1) = npart(1) * coords(1)
               
        call MPI_TYPE_CREATE_SUBARRAY( &
@@ -99,7 +99,7 @@ contains
       call MPI_FILE_WRITE_ALL( &
      &   unitg1d, &  ! file path
      &     gridX, &  ! the data
-     & Ssize(2)*nvarg, &! total data number
+     & Ssize(2)*Ssize(1), &! total data number
      & MPI_DOUBLE_PRECISION, & 
      & mpi_status_ignore, &
      & ierr)
@@ -119,7 +119,7 @@ contains
       
       Asize(1) = ntotal(2)+1 ! total jzones + edge
       Ssize(1) = npart(2)    ! jzones in 1 process
-      if(coords(2) .eq. ntiles(2)-1)Ssize(2)=Ssize(2)+1  ! + edge
+      if(coords(2) .eq. ntiles(2)-1)Ssize(1)=Ssize(1)+1  ! + edge
       Start(1) = npart(2) * coords(2)
       call MPI_TYPE_CREATE_SUBARRAY(&
      & 2, & ! dimension of array
@@ -152,7 +152,7 @@ contains
       call MPI_FILE_WRITE_ALL( &
      &   unitg2d,  &! file ID
      &     gridY,  &! the data
-     & Ssize(2)*nvarg,& ! total data number
+     & Ssize(2)*Ssize(1),& ! total data number
      & MPI_DOUBLE_PRECISION,&
      & mpi_status_ignore,&
      & ierr)
@@ -168,7 +168,7 @@ contains
       Ssize(2) = nvarg
       Start(2) = 0
       
-      if(coords(3) .eq. ntiles(3)-1)Ssize(2)=Ssize(2)+1  ! + edge
+      if(coords(3) .eq. ntiles(3)-1)Ssize(1)=Ssize(1)+1  ! + edge
       Start(1) = npart(3) * coords(3)
       call MPI_TYPE_CREATE_SUBARRAY(&
      & 2, & ! dimension of array
@@ -200,7 +200,7 @@ contains
       call MPI_FILE_WRITE_ALL(&
      &  unitg3d, & ! file path
      &    gridZ, & ! the data
-     & Ssize(2)*nvarg,& ! total data number
+     & Ssize(2)*Ssize(1),& ! total data number
      & MPI_DOUBLE_PRECISION, &
      & mpi_status_ignore, &
      & ierr)
