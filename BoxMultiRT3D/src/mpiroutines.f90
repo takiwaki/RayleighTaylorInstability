@@ -34,8 +34,8 @@ subroutine InitializeMPI
   call MPI_COMM_RANK( MPI_COMM_WORLD, myid_w  , ierr )
   
   ntiles(1)=1
-  ntiles(2)=2
-  ntiles(3)=2
+  ntiles(2)=4
+  ntiles(3)=1
   periodic(1)=.false.
   periodic(2)=.true.
   periodic(3)=.true.
@@ -78,8 +78,12 @@ subroutine InitializeMPI
      print *, "num of GPUs = ", ngpus
   end if
 
-  gpuid = mod(myid_w, ngpus)
-  if(ngpus == 0) gpuid = -1
+  if(ngpus == 0) then
+     gpuid = -1
+  else
+     gpuid = mod(myid_w, ngpus)
+  endif
+  
   if(gpuid >= 0) then
      call acc_set_device_num(gpuid, acc_device_nvidia)
   end if
