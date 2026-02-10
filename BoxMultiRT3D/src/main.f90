@@ -179,7 +179,7 @@ subroutine GenerateProblem
   enddo
 
 
-  write(6,*) rrv*100.0d0 &
+  if(myid_w == 0) write(6,*) rrv*100.0d0 &
        & , "% of Randam Perturbation imposed on velocity"
   seed(1) = 1
   seed(2) = 1
