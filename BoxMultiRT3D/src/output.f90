@@ -239,7 +239,7 @@ contains
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 ! DATA WRITE
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-    write(usrfile,"(a5,a1,i5.5,a4)")'field','.',timeid,".bin"
+    write(usrfile,"(a5,i5.5,a4)")'field',timeid,".bin"
     fpathbin = trim(datadir)//usrfile
     
       call MPI_FILE_OPEN(MPI_COMM_WORLD, &
