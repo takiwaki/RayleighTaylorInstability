@@ -355,7 +355,7 @@ subroutine YbcSendRecv(varsendYstt,varsendYend,varrecvYstt,varrecvYend)
 
   single: if(ntiles(2) == 1) then
 !$acc kernels
-!$acc loop collapse(3) independent, private(n)
+!$acc loop collapse(3) independent private(n)
   do k=1,kn-1
   do j=1,mgn
   do i=1,in-1
