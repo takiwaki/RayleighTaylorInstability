@@ -81,7 +81,7 @@ contains
       call MPI_COMM_SPLIT(comm3d,color,key,commG1D,ierr)
       
       color1D: if(color == 0) then
-      write(usrfile,"(A)")'grid1d.bin'
+      write(usrfile,"(A)")'grid1D.bin'
       fpathbin = trim(datadir)//usrfile
       call MPI_FILE_OPEN(commG1D, &
      &                         fpathbin, &  ! file path
@@ -134,7 +134,7 @@ contains
       call MPI_COMM_SPLIT(comm3d,color,key,commG2D,ierr)
       
       color2D: if(color == 0) then
-      write(usrfile,"(A)")'grid2d.bin'
+      write(usrfile,"(A)")'grid2D.bin'
       fpathbin = trim(datadir)//usrfile
  
       call MPI_FILE_OPEN(commG2D, &
@@ -182,7 +182,7 @@ contains
       key   =  coords(3)
       call MPI_COMM_SPLIT(comm3d,color,key,commG3D,ierr)
       color3D: if (color == 0) then
-      write(usrfile,"(A)")'grid3d.bin'
+      write(usrfile,"(A)")'grid3D.bin'
       fpathbin = trim(datadir)//usrfile
       
       call MPI_FILE_OPEN(commG3D,&
