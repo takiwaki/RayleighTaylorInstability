@@ -24,7 +24,7 @@
 
       real(8),parameter:: x1min=-0.75d0,x1max=0.75d0
       real(8),parameter:: x2min=-0.25d0,x2max=0.25d0
-      real(8),parameter:: x3min=-0.5d0,x3max=0.5d0
+      real(8),parameter:: x3min=-0.25d0,x3max=0.25d0
       real(8),dimension(in)::x1a,x1b
       real(8),dimension(jn)::x2a,x2b
       real(8),dimension(kn)::x3a,x3b
