@@ -104,7 +104,7 @@ subroutine GenerateGrid
 !$acc update device (x1a,x1b)
 !$acc update device (x2a,x2b)
 !$acc update device (x3a,x3b)
-  
+
   return
 end subroutine GenerateGrid
 
@@ -182,14 +182,14 @@ subroutine GenerateProblem
   if(myid_w == 0) write(6,*) rrv*100.0d0 &
        & , "% of Randam Perturbation imposed on velocity"
   seed(1) = 1
-  seed(2) = 1
+  seed(2) = 1 + myid_w*in*jn*kn
   call random_seed(PUT=seed(1:2))
   
-! pert
+! pert     
+  do k=ks,ke 
   do j=js,je
   do i=is,ie
-     call random_number(rnum)     
-  do k=ks,ke 
+     call random_number(rnum)
      v1(i,j,k)= rrv*(rnum(1)-0.5d0) &
      & *(1.0d0+cos(2.0d0*pi*(x1b(i)-(x1max+x1min)/2.0d0)/(x1max-x1min)))
   enddo

@@ -34,8 +34,8 @@ subroutine InitializeMPI
   call MPI_COMM_RANK( MPI_COMM_WORLD, myid_w  , ierr )
   
   ntiles(1)=1
-  ntiles(2)=4
-  ntiles(3)=1
+  ntiles(2)=2
+  ntiles(3)=2
   periodic(1)=.false.
   periodic(2)=.true.
   periodic(3)=.true.

@@ -378,6 +378,12 @@ subroutine Output(is_final)
 
 
   if(time .lt. tout+dtout .and. .not. is_final) return
+
+!$acc update host (d,v1,v2,v3)
+!$acc update host (p,ei,cs)
+!$acc update host (b1,b2,b3,bp)
+!$acc update host (gp)
+
   if(binaryout) then
      call MPI_IO_PACK(nout)
      call MPI_IO_WRITE(nout)
