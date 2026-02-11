@@ -189,9 +189,22 @@ subroutine GenerateProblem
   do k=ks,ke 
   do j=js,je
   do i=is,ie
-     call random_number(rnum)
-     v1(i,j,k)= rrv*(rnum(1)-0.5d0) &
-     & *(1.0d0+cos(2.0d0*pi*(x1b(i)-(x1max+x1min)/2.0d0)/(x1max-x1min)))
+!     call random_number(rnum)
+!     v1(i,j,k)= rrv*(rnum(1)-0.5d0) &
+!     & *(1.0d0+cos(2.0d0*pi*(x1b(i)-(x1max+x1min)/2.0d0)/(x1max-x1min)))
+!     call random_number(rnum)
+     v1(i,j,k)= v1(i,j,k) + rrv &
+     & *(1.0d0+cos(2.0d0*pi*3.0d0*(x3b(k)-(x3max + x3min)/2.0d0)/(x3max-x3min))) &
+     & *(1.0d0+cos(2.0d0*pi*4.0d0*(x2b(j)-(x2max + x2min)/2.0d0)/(x2max-x2min))) &
+     & *(1.0d0+cos(2.0d0*pi      *(x1b(i)-(x1max + x1min)/2.0d0)/(x1max-x1min)))
+     v1(i,j,k)= v1(i,j,k) + rrv &
+     & *(1.0d0+cos(2.0d0*pi*6.0d0*(x3b(k)-(x3max + x3min)/2.0d0)/(x3max-x3min))) &
+     & *(1.0d0+cos(2.0d0*pi*2.0d0*(x2b(j)-(x2max + x2min)/2.0d0)/(x2max-x2min))) &
+     & *(1.0d0+cos(2.0d0*pi      *(x1b(i)-(x1max + x1min)/2.0d0)/(x1max-x1min)))
+     v1(i,j,k)= v1(i,j,k) + rrv &
+     & *(1.0d0+cos(2.0d0*pi*8.0d0*(x3b(k)-(x3max + x3min)/2.0d0)/(x3max-x3min))) &
+     & *(1.0d0+cos(2.0d0*pi*8.0d0*(x2b(j)-(x2max + x2min)/2.0d0)/(x2max-x2min))) &
+     & *(1.0d0+cos(2.0d0*pi      *(x1b(i)-(x1max + x1min)/2.0d0)/(x1max-x1min)))
   enddo
   enddo
   enddo
