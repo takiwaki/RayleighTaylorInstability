@@ -103,6 +103,7 @@ contains
      varsendZend(i,j,k,nv2) = v2(i,j,ke-mgn+k)
      varsendZend(i,j,k,nv3) = v3(i,j,ke-mgn+k)
      varsendZend(i,j,k,6) = b1(i,j,ke-mgn+k)
+     varsendZend(i,j,k,7) = b2(i,j,ke-mgn+k)
      varsendZend(i,j,k,8) = b3(i,j,ke-mgn+k)
      varsendZend(i,j,k,9) = bp(i,j,ke-mgn+k)
 
@@ -376,6 +377,10 @@ subroutine YbcSendRecv(varsendYstt,varsendYend,varrecvYstt,varrecvYend)
      end select
      
      select case(boundary_yout)
+     case(periodicb)
+        do n=1,nbc
+           varrecvYend(i,j,k,n) = varsendYstt(i,j,k,n)
+        enddo
      case(reflection)
         do n=1,nbc
            varrecvYend(i,j,k,n) = varsendYend(i,mgn-j+1,k,n)
@@ -407,7 +412,7 @@ subroutine YbcSendRecv(varsendYstt,varsendYend,varrecvYstt,varrecvYend)
 !$acc end host_data
      else
 !$acc kernels
-!$acc loop collapse(3) independent, private(n)
+!$acc loop collapse(3) independent private(n)
         do k=1,kn-1
         do j=1,mgn
         do i=1,in-1
@@ -443,7 +448,7 @@ subroutine YbcSendRecv(varsendYstt,varsendYend,varrecvYstt,varrecvYend)
 !$acc end host_data
      else ! n2pdir
 !$acc kernels
-!$acc loop collapse(3) independent, private(n)
+!$acc loop collapse(3) independent private(n)
         do k=1,kn-1
         do i=1,in-1
         do j=1,mgn
@@ -499,7 +504,7 @@ subroutine ZbcSendRecv(varsendZstt,varsendZend,varrecvZstt,varrecvZend)
         varrecvZstt(i,j,k,nv3) = -varrecvZstt(i,j,k,nv3)  ! v3
      case(outflow)
         do n=1,nbc
-           varrecvZstt(i,j,k,n) = varsendZstt(i,1,k,n)
+           varrecvZstt(i,j,k,n) = varsendZstt(i,j,1,n)
         enddo
      end select
      
@@ -553,7 +558,7 @@ subroutine ZbcSendRecv(varsendZstt,varsendZend,varrecvZstt,varrecvZend)
               varrecvZstt(i,j,k,nv3) = -varrecvZstt(i,j,k,nv3)  ! v3
            case(outflow)
               do n=1,nbc
-                 varrecvZstt(i,j,k,n) = varsendZstt(i,1,k,n)
+                 varrecvZstt(i,j,k,n) = varsendZstt(i,j,1,n)
               enddo
            end select
     
