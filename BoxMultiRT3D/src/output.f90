@@ -20,9 +20,9 @@ module mpiiomod
   public:: nvars,nvarg
   
   public:: gridX,gridY,gridZ,data3D
-  public:: MPI_IO_PACK, MPI_IO_WRITE
+  public:: MPI_IO_Pack, MPI_IO_Write, WriteXDMF
 contains  
-  subroutine MPI_IO_WRITE(timeid)
+  subroutine MPI_IO_Write(timeid)
     use mpimod
     implicit NONE
     integer,intent(in) :: timeid
@@ -265,57 +265,56 @@ contains
       is_inited = .true.
 
       return
-    end subroutine MPI_IO_WRITE
+  end subroutine MPI_IO_Write
   
-    subroutine MPI_IO_PACK(nout)
-      !! Output the grid and variables.
-      !! The grid data contain the information of cell center and cell edge.
-      !! The variable data contains that of  cell center.
-      use basicmod
-      use mpimod
-      implicit none
-      integer::i,j,k
-      integer,intent(in):: nout
-      integer::iee,jee,kee
-      character(20),parameter::dirname="bindata/"
-      character(40)::filename
-      integer,parameter::unitout=17
-      integer,parameter:: gs=1
-      integer,parameter:: nvar=10
-      
-      logical, save:: is_inited
-      data is_inited /.false./
+  subroutine MPI_IO_Pack(nout)
+    !! Output the grid and variables.
+    !! The grid data contain the information of cell center and cell edge.
+    !! The variable data contains that of  cell center.
+    use basicmod
+    use mpimod
+    implicit none
+    integer::i,j,k
+    integer,intent(in):: nout
+    integer::iee,jee,kee
+    character(20),parameter::dirname=datadir
+    character(40)::filename
+    integer,parameter::unitout=17
+    integer,parameter:: gs=1
+    integer,parameter:: nvar=10
+    
+    logical, save:: is_inited
+    data is_inited /.false./
 
-
-      iee = ie
-      jee = je
-      kee = ke
+    iee = ie
+    jee = je
+    kee = ke
   
-      !> Include the information of the cell edge!
-      if(coords(1) .eq. ntiles(1)-1) iee = ie+1
-      if(coords(2) .eq. ntiles(2)-1) jee = je+1
-      if(coords(3) .eq. ntiles(3)-1) kee = ke+1
-  
-      if (.not. is_inited) then
-         npart(1) = ngrid1
-         npart(2) = ngrid2
-         npart(3) = ngrid3
-  
-         ntotal(1) = ngrid1*ntiles(1)
-         ntotal(2) = ngrid2*ntiles(2)
-         ntotal(3) = ngrid3*ntiles(3)
+    !> Include the information of the cell edge!
+    if(coords(1) .eq. ntiles(1)-1) iee = ie+1
+    if(coords(2) .eq. ntiles(2)-1) jee = je+1
+    if(coords(3) .eq. ntiles(3)-1) kee = ke+1
+    
+    if (.not. is_inited) then
+       npart(1) = ngrid1
+       npart(2) = ngrid2
+       npart(3) = ngrid3
+       
+       ntotal(1) = ngrid1*ntiles(1)
+       ntotal(2) = ngrid2*ntiles(2)
+       ntotal(3) = ngrid3*ntiles(3)
      
-         nvarg = 2 !! number of the variables for grid
-         nvars = 10!! number of the variables for variable
+       nvarg = 2 !! number of the variables for grid
+       nvars = 10!! number of the variables for variable
      
-         allocate(gridX(1:iee-is+1,nvarg))
-         allocate(gridY(1:jee-js+1,nvarg))
-         allocate(gridZ(1:kee-ks+1,nvarg))
+       allocate(gridX(1:iee-is+1,nvarg))
+       allocate(gridY(1:jee-js+1,nvarg))
+       allocate(gridZ(1:kee-ks+1,nvarg))
 
-         allocate(data3D(ngrid1,ngrid2,ngrid3,nvars))
+       allocate(data3D(ngrid1,ngrid2,ngrid3,nvars))
          
-         call makedirs(dirname)
-         is_inited =.true.
+       call makedirs(dirname)
+       is_inited =.true.
       endif
       
       !> Information of meta data.
@@ -352,10 +351,146 @@ contains
       data3D(1:npart(1),1:npart(2),1:npart(3), 9) =  p(is:ie,js:je,ks:ke)
       data3D(1:npart(1),1:npart(2),1:npart(3),10) = gp(is:ie,js:je,ks:ke)
 
-      
       return
       !         write(6,*) "bpf2",nflux2(mbps,i,j,k)
-    end subroutine MPI_IO_PACK    
+  end subroutine MPI_IO_Pack
+
+  subroutine WriteXDMF(time,nout)
+    use, intrinsic :: iso_fortran_env, only: int64,real64
+    implicit none
+    real(8),intent(in)::time
+    integer, intent(in) :: nout
+    integer:: itot, jtot, ktot
+
+    character(*), parameter :: dirname = datadir
+    character(256) :: xmfname, fgridx, fgridy, fgridz, fdata
+    integer :: u, ncell
+    integer(int64) :: bytes_per_real, bytes_per_field
+    integer(int64) :: off_d, off_v1, off_v2, off_v3, off_b1, off_b2, off_b3, off_bp, off_p, off_gp
+
+
+    itot = ntotal(1)
+    jtot = ntotal(2)
+    ktot = ntotal(3)
+    
+    ! ---- file names (match your ReadData) ----
+    write(xmfname,'(a,i5.5,a)') "field", nout, ".xmf"
+    xmfname = trim(dirname)//trim(xmfname)
+
+    fgridx = trim(dirname)//"grid1D.bin"
+    fgridy = trim(dirname)//"grid2D.bin"
+    fgridz = trim(dirname)//"grid3D.bin"
+    write(fdata,'(a,i5.5,a)') trim(dirname)//"field", nout,".bin"
+
+    ! ---- sizes & offsets ----
+    ! stream/unformatted wrote raw reals; assume real64 (8 bytes) because iso_fortran_env real64
+    bytes_per_real = int(storage_size(0.0_real64)/8, int64)
+    
+    ncell = itot*jtot*ktot
+    bytes_per_field = int(ncell, int64) * bytes_per_real
+
+    off_d  = 0_int64 * bytes_per_field
+    off_v1 = 1_int64 * bytes_per_field
+    off_v2 = 2_int64 * bytes_per_field
+    off_v3 = 3_int64 * bytes_per_field
+    off_b1 = 4_int64 * bytes_per_field
+    off_b2 = 5_int64 * bytes_per_field
+    off_b3 = 6_int64 * bytes_per_field
+    off_bp = 7_int64 * bytes_per_field
+    off_p  = 8_int64 * bytes_per_field
+    off_gp = 9_int64 * bytes_per_field
+
+    ! ---- write XDMF (XML) ----
+    open(newunit=u, file=xmfname, status="replace", action="write", form="formatted")
+    
+    write(u,'(a)') '<?xml version="1.0" ?>'
+    write(u,'(a)') '<!DOCTYPE Xdmf SYSTEM "Xdmf.dtd" []>'
+    write(u,'(a)') '<Xdmf Version="2.0">'
+    write(u,'(a)') '  <Domain>'
+    write(u,'(a)') '    <Grid Name="Grid" GridType="Uniform">'
+    write(u,'(a,es24.16,a)') '      <Time Value="', time, '"/>'
+
+    ! Topology: Rectilinear mesh uses node dimensions = (in+1, jn+1, kn+1)
+    ! Use Order="Fortran" consistently so Dimensions list matches (i,j,k).
+    write(u,'(a,i0,1x,i0,1x,i0,a)') '      <Topology TopologyType="3DRectMesh" Dimensions="', &
+         ktot+1, jtot+1, itot+1, '"/>'
+
+    write(u,'(a)') '      <Geometry GeometryType="VXVYVZ">'
+    call write_axis(u, fgridx, itot+1, int(itot+1,int64)*bytes_per_real, bytes_per_real)  ! x1a(:)
+    call write_axis(u, fgridy, jtot+1, int(jtot+1,int64)*bytes_per_real, bytes_per_real)  ! x2a(:)
+    call write_axis(u, fgridz, ktot+1, int(ktot+1,int64)*bytes_per_real, bytes_per_real)  ! x3a(:)
+
+    write(u,'(a)') '      </Geometry>'
+
+    ! ---- Cell-centered attributes (itot,jtot,ktot) ----
+    call write_attr(u, "d" , fdata, itot, jtot, ktot, off_d , bytes_per_real)
+    call write_attr(u, "v1", fdata, itot, jtot, ktot, off_v1, bytes_per_real)
+    call write_attr(u, "v2", fdata, itot, jtot, ktot, off_v2, bytes_per_real)
+    call write_attr(u, "v3", fdata, itot, jtot, ktot, off_v3, bytes_per_real)
+    call write_attr(u, "b1", fdata, itot, jtot, ktot, off_b1, bytes_per_real)
+    call write_attr(u, "b2", fdata, itot, jtot, ktot, off_b2, bytes_per_real)
+    call write_attr(u, "b3", fdata, itot, jtot, ktot, off_b3, bytes_per_real)
+    call write_attr(u, "bp", fdata, itot, jtot, ktot, off_bp, bytes_per_real)
+    call write_attr(u, "p" , fdata, itot, jtot, ktot, off_p , bytes_per_real)
+    call write_attr(u, "gp", fdata, itot, jtot, ktot, off_gp, bytes_per_real)
+
+    write(u,'(a)') '    </Grid>'
+    write(u,'(a)') '  </Domain>'
+    write(u,'(a)') '</Xdmf>'
+    
+    close(u)
+
+  contains
+
+    subroutine write_axis(u, fname, n, seek_bytes, bpr)
+      use, intrinsic :: iso_fortran_env, only: int64
+      implicit none
+      integer, intent(in) :: u, n
+      character(*), intent(in) :: fname
+      integer(int64), intent(in) :: seek_bytes, bpr
+
+      ! XDMF Binary DataItem:
+      ! - Format="Binary"
+      ! - Seek="bytes" to skip within file
+      ! - Precision="8" etc.
+      write(u,'(a)') '        <DataItem Dimensions="'//trim(itoa(n))// &
+           '" NumberType="Float" Precision="'//trim(itoa(int(bpr)))// &
+           '" Format="Binary" Endian="Little" Seek="'//trim(i64toa(seek_bytes))// &
+           '"  >'//trim(fname)//'</DataItem>'
+    end subroutine write_axis
+
+    subroutine write_attr(u, name, fname, nx, ny, nz, seek_bytes, bpr)
+      use, intrinsic :: iso_fortran_env, only: int64
+      implicit none
+      integer, intent(in) :: u, nx, ny, nz
+      character(*), intent(in) :: name, fname
+      integer(int64), intent(in) :: seek_bytes, bpr
+
+      write(u,'(a)') '      <Attribute Name="'//trim(name)//'" AttributeType="Scalar" Center="Cell">'
+      write(u,'(a)') '        <DataItem Dimensions="'//trim(itoa(nz))//' '//trim(itoa(ny))//' '//trim(itoa(nx))// &
+           '" NumberType="Float" Precision="'//trim(itoa(int(bpr)))// &
+           '" Format="Binary" Endian="Little" Seek="'//trim(i64toa(seek_bytes))// &
+           '" >'//trim(fname)//'</DataItem>'
+      write(u,'(a)') '      </Attribute>'
+    end subroutine write_attr
+    
+    function itoa(i) result(s)
+      implicit none
+      integer, intent(in) :: i
+      character(32) :: s
+      write(s,'(i0)') i
+    end function itoa
+
+    function i64toa(i) result(s)
+      use, intrinsic :: iso_fortran_env, only: int64
+      implicit none
+      integer(int64), intent(in) :: i
+      character(64) :: s
+      write(s,'(i0)') i
+    end function i64toa
+
+  end subroutine WriteXDMF
+
 end module mpiiomod
       
 subroutine Output(is_final)
@@ -374,7 +509,7 @@ subroutine Output(is_final)
   logical, save:: is_inited
   data is_inited /.false./
   
-  logical,parameter:: binaryout= .false.
+  logical,parameter:: binaryout= .true.
 
 
   if(time .lt. tout+dtout .and. .not. is_final) return
@@ -385,8 +520,9 @@ subroutine Output(is_final)
 !$acc update host (gp)
 
   if(binaryout) then
-     call MPI_IO_PACK(nout)
-     call MPI_IO_WRITE(nout)
+     call MPI_IO_Pack(nout)
+     call MPI_IO_Write(nout)
+     if(myid_w==0) call WriteXDMF(time,nout)
   else
      call ASC_WRITE(nout)
   endif
