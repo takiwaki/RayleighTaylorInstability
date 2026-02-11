@@ -377,10 +377,10 @@ contains
     write(xmfname,'(a,i5.5,a)') "field", nout, ".xmf"
     xmfname = trim(dirname)//trim(xmfname)
 
-    fgridx = "grid1D.bin"
-    fgridy = "grid2D.bin"
-    fgridz = "grid3D.bin"
-    write(fdata,'(a,i5.5,a)') "field", nout,".bin"
+    fgridx = trim(dirname)//"grid1D.bin"
+    fgridy = trim(dirname)//"grid2D.bin"
+    fgridz = trim(dirname)//"grid3D.bin"
+    write(fdata,'(a,i5.5,a)') trim(dirname)//"field", nout,".bin"
 
     ! ---- sizes & offsets ----
     ! stream/unformatted wrote raw reals; assume real64 (8 bytes) because iso_fortran_env real64
