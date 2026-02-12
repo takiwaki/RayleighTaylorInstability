@@ -142,10 +142,11 @@ subroutine GenerateProblem
     &         ( dexp( - (x2b(j) + 0.5d0)**2/sig**2 ) +  &
     &           dexp( - (x2b(j) - 0.5d0)**2/sig**2 ) )
      v3(i,j,k) = 0.0d0
-     b1(i,j,k) = B0
+     b1(i,j,k) = B0*0.0d0
      b2(i,j,k) = 0.0d0
      b3(i,j,k) = 0.0d0
      bp(i,j,k) = 0.0d0
+     Xcomp(1,i,j,k) =  0.5d0*( dtanh( (x2b(j)+0.5d0)/wid ) - tanh( (x2b(j)-0.5d0)/wid) )
   enddo
   enddo
   enddo
@@ -168,10 +169,9 @@ subroutine GenerateProblem
 ! pert     
   do k=ks,ke 
   do j=js,je
-  do i=is,ie
      call random_number(rnum)
-     v1(i,j,k)= rrv*(rnum(1)-0.5d0) &
-     & *(1.0d0+cos(2.0d0*pi*(x1b(i)-(x1max+x1min)/2.0d0)/(x1max-x1min)))
+  do i=is,ie
+     v1(i,j,k)= dv*rrv*(rnum(1)-0.5d0) 
   enddo
   enddo
   enddo
@@ -196,6 +196,7 @@ subroutine GenerateProblem
 !$acc update device (p,ei,cs)
 !$acc update device (b1,b2,b3,bp)
 !$acc update device (gp)
+!$acc update device (Xcomp)
       
   return
 end subroutine GenerateProblem

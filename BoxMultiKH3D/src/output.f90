@@ -81,7 +81,7 @@ contains
       call MPI_COMM_SPLIT(comm3d,color,key,commG1D,ierr)
       
       color1D: if(color == 0) then
-      write(usrfile,"(A)")'grid1d.bin'
+      write(usrfile,"(A)")'grid1D.bin'
       fpathbin = trim(datadir)//usrfile
       call MPI_FILE_OPEN(commG1D, &
      &                         fpathbin, &  ! file path
@@ -134,7 +134,7 @@ contains
       call MPI_COMM_SPLIT(comm3d,color,key,commG2D,ierr)
       
       color2D: if(color == 0) then
-      write(usrfile,"(A)")'grid2d.bin'
+      write(usrfile,"(A)")'grid2D.bin'
       fpathbin = trim(datadir)//usrfile
  
       call MPI_FILE_OPEN(commG2D, &
@@ -182,7 +182,7 @@ contains
       key   =  coords(3)
       call MPI_COMM_SPLIT(comm3d,color,key,commG3D,ierr)
       color3D: if (color == 0) then
-      write(usrfile,"(A)")'grid3d.bin'
+      write(usrfile,"(A)")'grid3D.bin'
       fpathbin = trim(datadir)//usrfile
       
       call MPI_FILE_OPEN(commG3D,&
@@ -281,8 +281,9 @@ contains
     character(40)::filename
     integer,parameter::unitout=17
     integer,parameter:: gs=1
-    integer,parameter:: nvar=10
-    
+    integer,parameter:: nvarg = 2 !! number of the variables for grid
+    integer,parameter:: nvars = 11!! number of the variables for variable
+     
     logical, save:: is_inited
     data is_inited /.false./
 
@@ -303,9 +304,6 @@ contains
        ntotal(1) = ngrid1*ntiles(1)
        ntotal(2) = ngrid2*ntiles(2)
        ntotal(3) = ngrid3*ntiles(3)
-     
-       nvarg = 2 !! number of the variables for grid
-       nvars = 10!! number of the variables for variable
      
        allocate(gridX(1:iee-is+1,nvarg))
        allocate(gridY(1:jee-js+1,nvarg))
@@ -350,6 +348,7 @@ contains
       data3D(1:npart(1),1:npart(2),1:npart(3), 8) = bp(is:ie,js:je,ks:ke)
       data3D(1:npart(1),1:npart(2),1:npart(3), 9) =  p(is:ie,js:je,ks:ke)
       data3D(1:npart(1),1:npart(2),1:npart(3),10) = gp(is:ie,js:je,ks:ke)
+      data3D(1:npart(1),1:npart(2),1:npart(3),11) = Xcomp(1,is:ie,js:je,ks:ke)
 
       return
       !         write(6,*) "bpf2",nflux2(mbps,i,j,k)
@@ -366,7 +365,7 @@ contains
     character(256) :: xmfname, fgridx, fgridy, fgridz, fdata
     integer :: u, ncell
     integer(int64) :: bytes_per_real, bytes_per_field
-    integer(int64) :: off_d, off_v1, off_v2, off_v3, off_b1, off_b2, off_b3, off_bp, off_p, off_gp
+    integer(int64) :: off_d, off_v1, off_v2, off_v3, off_b1, off_b2, off_b3, off_bp, off_p, off_gp, off_X
 
 
     itot = ntotal(1)
@@ -377,10 +376,10 @@ contains
     write(xmfname,'(a,i5.5,a)') "field", nout, ".xmf"
     xmfname = trim(dirname)//trim(xmfname)
 
-    fgridx = trim(dirname)//"grid1D.bin"
-    fgridy = trim(dirname)//"grid2D.bin"
-    fgridz = trim(dirname)//"grid3D.bin"
-    write(fdata,'(a,i5.5,a)') trim(dirname)//"field", nout,".bin"
+    fgridx = "grid1D.bin"
+    fgridy = "grid2D.bin"
+    fgridz = "grid3D.bin"
+    write(fdata,'(a,i5.5,a)') "field", nout,".bin"
 
     ! ---- sizes & offsets ----
     ! stream/unformatted wrote raw reals; assume real64 (8 bytes) because iso_fortran_env real64
@@ -399,6 +398,7 @@ contains
     off_bp = 7_int64 * bytes_per_field
     off_p  = 8_int64 * bytes_per_field
     off_gp = 9_int64 * bytes_per_field
+    off_X  =10_int64 * bytes_per_field
 
     ! ---- write XDMF (XML) ----
     open(newunit=u, file=xmfname, status="replace", action="write", form="formatted")
@@ -433,6 +433,7 @@ contains
     call write_attr(u, "bp", fdata, itot, jtot, ktot, off_bp, bytes_per_real)
     call write_attr(u, "p" , fdata, itot, jtot, ktot, off_p , bytes_per_real)
     call write_attr(u, "gp", fdata, itot, jtot, ktot, off_gp, bytes_per_real)
+    call write_attr(u, "X" , fdata, itot, jtot, ktot, off_X , bytes_per_real)
 
     write(u,'(a)') '    </Grid>'
     write(u,'(a)') '  </Domain>'
@@ -563,10 +564,10 @@ subroutine ASC_WRITE(nout)
   write(unitasc,'((a1,1x),i5)') "#",ie-is+1
   write(unitasc,'((a1,1x),i5)') "#",je-js+1
   write(unitasc,'((a1,1x),(i5,1x),E13.3)') "#",k,x3b(k)
-  write(unitasc,'(A)') "# x y d vx vy p phi"
+  write(unitasc,'(A)') "# x y d vx vy p phi X"
   do j=js,je
      do i=is,ie
-        write(unitasc,"(7(E13.3,1x))")x1b(i),x2b(j),d(i,j,k),v1(i,j,k),v2(i,j,k),p(i,j,k),gp(i,j,k)
+        write(unitasc,"(8(E13.3,1x))")x1b(i),x2b(j),d(i,j,k),v1(i,j,k),v2(i,j,k),p(i,j,k),gp(i,j,k),Xcomp(1,i,j,k)
      enddo
      write(unitasc,*) ""
   enddo
