@@ -11,7 +11,9 @@ module mpiiomod
   
   integer,dimension(3):: ntotal
   integer,dimension(3):: npart
-  integer:: nvars,nvarg
+  integer,parameter:: nvarg = 2 !! number of the variables for grid
+  integer,parameter:: nvars = 11!! number of the variables for variable
+
   character(len=10),parameter :: datadir="bindata/"
     
   real(8),dimension(:,:),allocatable:: gridX, gridY, gridZ
@@ -281,8 +283,6 @@ contains
     character(40)::filename
     integer,parameter::unitout=17
     integer,parameter:: gs=1
-    integer,parameter:: nvarg = 2 !! number of the variables for grid
-    integer,parameter:: nvars = 11!! number of the variables for variable
      
     logical, save:: is_inited
     data is_inited /.false./
