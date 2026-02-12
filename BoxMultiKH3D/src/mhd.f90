@@ -633,7 +633,7 @@ end subroutine TimestepControl
          rigtco(mubu)=Prigte(nbm2)  ! b_y
          rigtco(mubv)=Prigte(nbm3)  ! b_z
          rigtco(mubp)=Prigte(nbps)  ! psi
-         rigtco(must:mued)=Prigte(nden)*Prigte(nst:ned)*Prigte(nve2) ! rho X v
+         rigtco(must:mued)=Prigte(nden)*Prigte(nst:ned) ! rho X v
          
          ptl = Prigte(npre) + ( Prigte(nbm1)**2 &
      &                         +Prigte(nbm2)**2 &
@@ -1113,8 +1113,8 @@ end subroutine TimestepControl
         vzrst = vzr
         rzrst = rorst*vzrst
 
-        byrst = rolst/rol * byr
-        bzrst = rolst/rol * bzr
+        byrst = rorst/ror * byr
+        bzrst = rorst/ror * bzr
            
         eerst = (sdr*eer - ptr*vxr  + ptst*sm  )*isdmr
               
