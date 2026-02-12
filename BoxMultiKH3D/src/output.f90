@@ -519,6 +519,7 @@ subroutine Output(is_final)
 !$acc update host (p,ei,cs)
 !$acc update host (b1,b2,b3,bp)
 !$acc update host (gp)
+!$acc update host (Xcomp)
 
   if(binaryout) then
      call MPI_IO_Pack(nout)
