@@ -171,7 +171,7 @@ subroutine GenerateProblem
   do j=js,je
      call random_number(rnum)
   do i=is,ie
-     v1(i,j,k)= dv*rrv*(rnum(1)-0.5d0) 
+     v1(i,j,k)= v1(i,j,k) + dv*rrv*(rnum(1)-0.5d0) 
   enddo
   enddo
   enddo
