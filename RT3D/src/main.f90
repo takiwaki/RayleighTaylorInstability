@@ -123,7 +123,7 @@ subroutine GenerateProblem
   data P0  / 2.5d0 /
   data Rcenter / 0.0d0 /
   
-  real(8)::d1d(in),pa1d(in),pb1d(in)
+  real(8)::d1d(in),pa1d(in),pb1d(in),xcomp1d(in)
   
   integer,dimension(2) :: seed
   real(8),dimension(1) :: rnum
@@ -136,9 +136,11 @@ subroutine GenerateProblem
 
   do i=1,in-1
      if(x1b(i) .lt. Rcenter) then
-        d1d(i) = RD   
+        d1d(i) = RD
+        xcomp1d(i) = 1.0d0
      else
         d1d(i) = RU
+        xcomp1d(i) = 0.0d0
      endif
   enddo
 
@@ -158,6 +160,7 @@ subroutine GenerateProblem
   do j=js-mgn,je+mgn
   do i=is-mgn,ie+mgn
      d(i,j,k) = d1d(i)
+     Xcomp(1,i,j,k) = xcomp1d(i)
      p(i,j,k) = pb1d(i)
      v1(i,j,k) = 0.0d0
      v2(i,j,k) = 0.0d0
@@ -229,6 +232,7 @@ subroutine GenerateProblem
 !$acc update device (p,ei,cs)
 !$acc update device (b1,b2,b3,bp)
 !$acc update device (gp)
+!$acc update device (Xcomp)
       
   return
 end subroutine GenerateProblem

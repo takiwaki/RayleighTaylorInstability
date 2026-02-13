@@ -5,8 +5,8 @@ module boundarymod
 
   integer,parameter:: periodicb=1,reflection=2,outflow=3
   integer,parameter:: boundary_xin=reflection, boundary_xout=reflection
-  integer,parameter:: boundary_yin=periodicb  , boundary_yout=periodicb
-  integer,parameter:: boundary_zin=periodicb  , boundary_zout=periodicb
+  integer,parameter:: boundary_yin=periodicb , boundary_yout=periodicb
+  integer,parameter:: boundary_zin=periodicb , boundary_zout=periodicb
   
   integer,parameter:: nv1=3,nv2=4,nv3=5
  
@@ -52,6 +52,7 @@ contains
      varsendXend(i,j,k,7) = b2(ie-mgn+i,j,k)
      varsendXend(i,j,k,8) = b3(ie-mgn+i,j,k)
      varsendXend(i,j,k,9) = bp(ie-mgn+i,j,k)
+     varsendXend(i,j,k,10:nbc) = Xcomp(1:ncomp,ie-mgn+i,j,k)
 
      varsendXstt(i,j,k,1) =  d(  is+i-1,j,k)
      varsendXstt(i,j,k,2) = ei(  is+i-1,j,k)
@@ -62,6 +63,7 @@ contains
      varsendXstt(i,j,k,7) = b2(  is+i-1,j,k)
      varsendXstt(i,j,k,8) = b3(  is+i-1,j,k)
      varsendXstt(i,j,k,9) = bp(  is+i-1,j,k)
+     varsendXstt(i,j,k,10:nbc) = Xcomp(1:ncomp,is+i-1,j,k)
   enddo
   enddo
   enddo
@@ -79,6 +81,7 @@ contains
      varsendYend(i,j,k,7) = b2(i,je-mgn+j,k)
      varsendYend(i,j,k,8) = b3(i,je-mgn+j,k)
      varsendYend(i,j,k,9) = bp(i,je-mgn+j,k)
+     varsendYend(i,j,k,10:nbc) = Xcomp(1:ncomp,i,je-mgn+j,k)
 
      varsendYstt(i,j,k,1) =  d(i,  js+j-1,k)
      varsendYstt(i,j,k,2) = ei(i,  js+j-1,k)
@@ -89,6 +92,7 @@ contains
      varsendYstt(i,j,k,7) = b2(i,  js+j-1,k)
      varsendYstt(i,j,k,8) = b3(i,  js+j-1,k)
      varsendYstt(i,j,k,9) = bp(i,  js+j-1,k)
+     varsendYstt(i,j,k,10:nbc) = Xcomp(1:ncomp,i,  js+j-1,k)
   enddo
   enddo
   enddo
@@ -106,6 +110,7 @@ contains
      varsendZend(i,j,k,7) = b2(i,j,ke-mgn+k)
      varsendZend(i,j,k,8) = b3(i,j,ke-mgn+k)
      varsendZend(i,j,k,9) = bp(i,j,ke-mgn+k)
+     varsendZend(i,j,k,10:nbc) = Xcomp(1:ncomp,i,j,ke-mgn+k)
 
      varsendZstt(i,j,k,1) =  d(i,j,ks+k-1  )
      varsendZstt(i,j,k,2) = ei(i,j,ks+k-1  )
@@ -116,6 +121,7 @@ contains
      varsendZstt(i,j,k,7) = b2(i,j,ks+k-1  )
      varsendZstt(i,j,k,8) = b3(i,j,ks+k-1  )
      varsendZstt(i,j,k,9) = bp(i,j,ks+k-1  )
+     varsendZstt(i,j,k,10:nbc) = Xcomp(1:ncomp,i,j,ks+k-1  )
   enddo
   enddo
   enddo
@@ -139,6 +145,7 @@ contains
      b2(i,j,k) = varrecvXstt(i,j,k,7)
      b3(i,j,k) = varrecvXstt(i,j,k,8)
      bp(i,j,k) = varrecvXstt(i,j,k,9)
+     Xcomp(1:ncomp,i,j,k) = varrecvXstt(i,j,k,10:nbc)
      
       d(ie+i,j,k) = varrecvXend(i,j,k,1)
      ei(ie+i,j,k) = varrecvXend(i,j,k,2)
@@ -149,6 +156,7 @@ contains
      b2(ie+i,j,k) = varrecvXend(i,j,k,7)
      b3(ie+i,j,k) = varrecvXend(i,j,k,8)
      bp(ie+i,j,k) = varrecvXend(i,j,k,9)
+     Xcomp(1:ncomp,ie+i,j,k) = varrecvXend(i,j,k,10:nbc)
   enddo
   enddo
   enddo
@@ -166,6 +174,7 @@ contains
      b2(i,j,k) = varrecvYstt(i,j,k,7)
      b3(i,j,k) = varrecvYstt(i,j,k,8)
      bp(i,j,k) = varrecvYstt(i,j,k,9)
+     Xcomp(1:ncomp,i,j,k) = varrecvYstt(i,j,k,10:nbc)
      
       d(i,je+j,k) = varrecvYend(i,j,k,1)
      ei(i,je+j,k) = varrecvYend(i,j,k,2)
@@ -176,6 +185,7 @@ contains
      b2(i,je+j,k) = varrecvYend(i,j,k,7)
      b3(i,je+j,k) = varrecvYend(i,j,k,8)
      bp(i,je+j,k) = varrecvYend(i,j,k,9)
+     Xcomp(1:ncomp,i,je+j,k) = varrecvYend(i,j,k,10:nbc)
   enddo
   enddo
   enddo
@@ -194,6 +204,7 @@ contains
      b2(i,j,k) = varrecvZstt(i,j,k,7)
      b3(i,j,k) = varrecvZstt(i,j,k,8)
      bp(i,j,k) = varrecvZstt(i,j,k,9)
+     Xcomp(1:ncomp,i,j,k) = varrecvZstt(i,j,k,10:nbc)
      
       d(i,j,ke+k) = varrecvZend(i,j,k,1)
      ei(i,j,ke+k) = varrecvZend(i,j,k,2)
@@ -204,6 +215,7 @@ contains
      b2(i,j,ke+k) = varrecvZend(i,j,k,7)
      b3(i,j,ke+k) = varrecvZend(i,j,k,8)
      bp(i,j,ke+k) = varrecvZend(i,j,k,9)
+     Xcomp(1:ncomp,i,j,ke+k) = varrecvZend(i,j,k,10:nbc)
   enddo
   enddo
   enddo

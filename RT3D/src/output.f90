@@ -4,6 +4,7 @@
 !==================================================
 
 module mpiiomod
+  use basicmod, only: ncomp
   implicit none
   private
   integer::SAG1D,SAG2D,SAG3D,SAD3D
@@ -11,7 +12,15 @@ module mpiiomod
   
   integer,dimension(3):: ntotal
   integer,dimension(3):: npart
-  integer:: nvars,nvarg
+  integer,parameter:: nvarg = 2 !! number of the variables for grid
+  integer,parameter:: nvars = 10+ncomp!! number of the variables for variable
+
+  character(len=10),parameter :: binaryextension=".bin"
+  character(len=10),parameter :: filegrid1D="grid1D"//binaryextension
+  character(len=10),parameter :: filegrid2D="grid2D"//binaryextension
+  character(len=10),parameter :: filegrid3D="grid3D"//binaryextension
+  character(len=10),parameter :: filefield ="field"
+  
   character(len=10),parameter :: datadir="bindata/"
     
   real(8),dimension(:,:),allocatable:: gridX, gridY, gridZ
@@ -81,7 +90,7 @@ contains
       call MPI_COMM_SPLIT(comm3d,color,key,commG1D,ierr)
       
       color1D: if(color == 0) then
-      write(usrfile,"(A)")'grid1D.bin'
+      write(usrfile,"(A)") filegrid1D
       fpathbin = trim(datadir)//usrfile
       call MPI_FILE_OPEN(commG1D, &
      &                         fpathbin, &  ! file path
@@ -134,7 +143,7 @@ contains
       call MPI_COMM_SPLIT(comm3d,color,key,commG2D,ierr)
       
       color2D: if(color == 0) then
-      write(usrfile,"(A)")'grid2D.bin'
+      write(usrfile,"(A)") filegrid2D
       fpathbin = trim(datadir)//usrfile
  
       call MPI_FILE_OPEN(commG2D, &
@@ -182,7 +191,7 @@ contains
       key   =  coords(3)
       call MPI_COMM_SPLIT(comm3d,color,key,commG3D,ierr)
       color3D: if (color == 0) then
-      write(usrfile,"(A)")'grid3D.bin'
+      write(usrfile,"(A)") filegrid3D
       fpathbin = trim(datadir)//usrfile
       
       call MPI_FILE_OPEN(commG3D,&
@@ -239,7 +248,7 @@ contains
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 ! DATA WRITE
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-    write(usrfile,"(a5,i5.5,a4)")'field',timeid,".bin"
+    write(usrfile,"(A,i5.5,A)") filefield,timeid,binaryextension
     fpathbin = trim(datadir)//usrfile
     
       call MPI_FILE_OPEN(MPI_COMM_WORLD, &
@@ -274,15 +283,14 @@ contains
     use basicmod
     use mpimod
     implicit none
-    integer::i,j,k
+    integer::i,j,k,n
     integer,intent(in):: nout
     integer::iee,jee,kee
     character(20),parameter::dirname=datadir
     character(40)::filename
     integer,parameter::unitout=17
     integer,parameter:: gs=1
-    integer,parameter:: nvar=10
-    
+     
     logical, save:: is_inited
     data is_inited /.false./
 
@@ -303,9 +311,6 @@ contains
        ntotal(1) = ngrid1*ntiles(1)
        ntotal(2) = ngrid2*ntiles(2)
        ntotal(3) = ngrid3*ntiles(3)
-     
-       nvarg = 2 !! number of the variables for grid
-       nvars = 10!! number of the variables for variable
      
        allocate(gridX(1:iee-is+1,nvarg))
        allocate(gridY(1:jee-js+1,nvarg))
@@ -350,7 +355,9 @@ contains
       data3D(1:npart(1),1:npart(2),1:npart(3), 8) = bp(is:ie,js:je,ks:ke)
       data3D(1:npart(1),1:npart(2),1:npart(3), 9) =  p(is:ie,js:je,ks:ke)
       data3D(1:npart(1),1:npart(2),1:npart(3),10) = gp(is:ie,js:je,ks:ke)
-
+      do n=1,ncomp
+         data3D(1:npart(1),1:npart(2),1:npart(3),nvars-ncomp+n) = Xcomp(n,is:ie,js:je,ks:ke)
+      enddo
       return
       !         write(6,*) "bpf2",nflux2(mbps,i,j,k)
   end subroutine MPI_IO_Pack
@@ -361,12 +368,13 @@ contains
     real(8),intent(in)::time
     integer, intent(in) :: nout
     integer:: itot, jtot, ktot
+    integer:: n
 
     character(*), parameter :: dirname = datadir
     character(256) :: xmfname, fgridx, fgridy, fgridz, fdata
     integer :: u, ncell
     integer(int64) :: bytes_per_real, bytes_per_field
-    integer(int64) :: off_d, off_v1, off_v2, off_v3, off_b1, off_b2, off_b3, off_bp, off_p, off_gp
+    integer(int64) :: off_base
 
 
     itot = ntotal(1)
@@ -377,10 +385,10 @@ contains
     write(xmfname,'(a,i5.5,a)') "field", nout, ".xmf"
     xmfname = trim(dirname)//trim(xmfname)
 
-    fgridx = "grid1D.bin"
-    fgridy = "grid2D.bin"
-    fgridz = "grid3D.bin"
-    write(fdata,'(a,i5.5,a)') "field", nout,".bin"
+    fgridx = filegrid1D
+    fgridy = filegrid2D
+    fgridz = filegrid3D
+    write(fdata,'(a,i5.5,a)') filefield, nout,binaryextension
 
     ! ---- sizes & offsets ----
     ! stream/unformatted wrote raw reals; assume real64 (8 bytes) because iso_fortran_env real64
@@ -388,17 +396,6 @@ contains
     
     ncell = itot*jtot*ktot
     bytes_per_field = int(ncell, int64) * bytes_per_real
-
-    off_d  = 0_int64 * bytes_per_field
-    off_v1 = 1_int64 * bytes_per_field
-    off_v2 = 2_int64 * bytes_per_field
-    off_v3 = 3_int64 * bytes_per_field
-    off_b1 = 4_int64 * bytes_per_field
-    off_b2 = 5_int64 * bytes_per_field
-    off_b3 = 6_int64 * bytes_per_field
-    off_bp = 7_int64 * bytes_per_field
-    off_p  = 8_int64 * bytes_per_field
-    off_gp = 9_int64 * bytes_per_field
 
     ! ---- write XDMF (XML) ----
     open(newunit=u, file=xmfname, status="replace", action="write", form="formatted")
@@ -422,18 +419,21 @@ contains
 
     write(u,'(a)') '      </Geometry>'
 
+    off_base = 0_int64
     ! ---- Cell-centered attributes (itot,jtot,ktot) ----
-    call write_attr(u, "d" , fdata, itot, jtot, ktot, off_d , bytes_per_real)
-    call write_attr(u, "v1", fdata, itot, jtot, ktot, off_v1, bytes_per_real)
-    call write_attr(u, "v2", fdata, itot, jtot, ktot, off_v2, bytes_per_real)
-    call write_attr(u, "v3", fdata, itot, jtot, ktot, off_v3, bytes_per_real)
-    call write_attr(u, "b1", fdata, itot, jtot, ktot, off_b1, bytes_per_real)
-    call write_attr(u, "b2", fdata, itot, jtot, ktot, off_b2, bytes_per_real)
-    call write_attr(u, "b3", fdata, itot, jtot, ktot, off_b3, bytes_per_real)
-    call write_attr(u, "bp", fdata, itot, jtot, ktot, off_bp, bytes_per_real)
-    call write_attr(u, "p" , fdata, itot, jtot, ktot, off_p , bytes_per_real)
-    call write_attr(u, "gp", fdata, itot, jtot, ktot, off_gp, bytes_per_real)
-
+    call write_attr(u, "d" , fdata, itot, jtot, ktot, off_base, bytes_per_real); off_base=off_base + 1_int64 * bytes_per_field
+    call write_attr(u, "v1", fdata, itot, jtot, ktot, off_base, bytes_per_real); off_base=off_base + 1_int64 * bytes_per_field
+    call write_attr(u, "v2", fdata, itot, jtot, ktot, off_base, bytes_per_real); off_base=off_base + 1_int64 * bytes_per_field
+    call write_attr(u, "v3", fdata, itot, jtot, ktot, off_base, bytes_per_real); off_base=off_base + 1_int64 * bytes_per_field
+    call write_attr(u, "b1", fdata, itot, jtot, ktot, off_base, bytes_per_real); off_base=off_base + 1_int64 * bytes_per_field
+    call write_attr(u, "b2", fdata, itot, jtot, ktot, off_base, bytes_per_real); off_base=off_base + 1_int64 * bytes_per_field
+    call write_attr(u, "b3", fdata, itot, jtot, ktot, off_base, bytes_per_real); off_base=off_base + 1_int64 * bytes_per_field
+    call write_attr(u, "bp", fdata, itot, jtot, ktot, off_base, bytes_per_real); off_base=off_base + 1_int64 * bytes_per_field
+    call write_attr(u, "p" , fdata, itot, jtot, ktot, off_base, bytes_per_real); off_base=off_base + 1_int64 * bytes_per_field
+    call write_attr(u, "gp", fdata, itot, jtot, ktot, off_base, bytes_per_real); off_base=off_base + 1_int64 * bytes_per_field
+    do n=1,ncomp
+       call write_attr(u, "X"//trim(adjustl(to_str(n))) , fdata, itot, jtot, ktot, off_base , bytes_per_real); off_base=off_base + 1_int64 * bytes_per_field
+    enddo
     write(u,'(a)') '    </Grid>'
     write(u,'(a)') '  </Domain>'
     write(u,'(a)') '</Xdmf>'
@@ -490,6 +490,13 @@ contains
     end function i64toa
 
   end subroutine WriteXDMF
+  
+  pure function to_str(i) result(s)
+    implicit none
+    integer, intent(in) :: i
+    character(len=32) :: s
+    write(s,'(i0)') i
+  end function to_str
 
 end module mpiiomod
       
@@ -518,6 +525,7 @@ subroutine Output(is_final)
 !$acc update host (p,ei,cs)
 !$acc update host (b1,b2,b3,bp)
 !$acc update host (gp)
+!$acc update host (Xcomp)
 
   if(binaryout) then
      call MPI_IO_Pack(nout)
@@ -542,10 +550,11 @@ subroutine ASC_WRITE(nout)
   use basicmod
   implicit none
   integer,intent(in):: nout
-  integer:: i,j,k
+  integer:: i,j,k,n
   integer:: unitasc
   character(len=10),parameter :: dirname="ascdata/"
   character(40)::filename
+  character(len=256):: header
   logical,save :: is_inited
   data is_inited / .false. /
   
@@ -563,17 +572,33 @@ subroutine ASC_WRITE(nout)
   write(unitasc,'((a1,1x),i5)') "#",ie-is+1
   write(unitasc,'((a1,1x),i5)') "#",je-js+1
   write(unitasc,'((a1,1x),(i5,1x),E13.3)') "#",k,x3b(k)
-  write(unitasc,'(A)') "# x y d vx vy p phi"
+  header = "# x y d vx vy p phi"
+  do n=1,ncomp
+     header = trim(header)//" X"//trim(adjustl(to_str(n)))
+  enddo
+  write(unitasc,'(A)') header 
   do j=js,je
      do i=is,ie
-        write(unitasc,"(7(E13.3,1x))")x1b(i),x2b(j),d(i,j,k),v1(i,j,k),v2(i,j,k),p(i,j,k),gp(i,j,k)
+        write(unitasc,"(*(E13.3,1x))")x1b(i),x2b(j),d(i,j,k),v1(i,j,k),v2(i,j,k),p(i,j,k),gp(i,j,k),(Xcomp(n,i,j,k),n=1,ncomp)
      enddo
      write(unitasc,*) ""
   enddo
   close(unitasc)
     
   return
+contains
+  
+  pure function to_str(i) result(s)
+    implicit none
+    integer, intent(in) :: i
+    character(len=32) :: s
+    write(s,'(i0)') i
+  end function to_str
+
 end subroutine ASC_WRITE
+
+
+
 
 subroutine makedirs(outdir)
   implicit none
