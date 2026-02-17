@@ -5,9 +5,9 @@
 ## How to run
 
 ### compile 
-This is the instruction for spring school of division of science. First login the server, more.
+This is the instruction for spring school of division of science. First login the server, m000.
 
-    ssh <your account>@more.cfca.nao.ac.jp
+    ssh <your account>@m000.cfca.nao.ac.jp
     
 Then copy the source code.
 
@@ -24,7 +24,7 @@ Then `Simulation.x` is made in this directory.
 ### run
 Let's run the code.
     
-    qsub pbs_more.sh
+    qsub pbs_m000.sh
     qstat -u <your account>
     
 The simulation data is saved in `bindata/`.
