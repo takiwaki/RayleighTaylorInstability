@@ -147,11 +147,11 @@ flowchart TD
     B6 -- plot rule --> B7
     B7["$ gnuplot -e ifnum=?? Plot2D.plt"]:::cmd
     B4 -- used by --> B7
-    B8[(figures/***two?????.png <br> *** = den, pre,vel)]:::result
+    B8[(figures/***two?????.png <br> *** = den, xcm)]:::result
     B7 -- write --> B8
 
     B18[[MakeMovie.sh]]:::code
-    B19["$ make movies <br>$ ./MakeMovie.sh ***two <br> *** = den, pre,vel"]:::cmd
+    B19["$ make movies <br>$ ./MakeMovie.sh ***two <br> *** = den, xcm"]:::cmd
     B8 -- used by --> B19
     B18 -- invoked by --> B19
     B19 -- write --> B20
