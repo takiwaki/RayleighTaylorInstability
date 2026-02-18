@@ -5,14 +5,14 @@
 ## How to run
 
 ### compile 
-This is the instruction for spring school of division of science. First login the server, more.
+This is the instruction for spring school of division of science. First login the server, m000.
 
-    ssh <your account>@more.cfca.nao.ac.jp
+    ssh <your account>@m000.cfca.nao.ac.jp
     
 Then copy the source code.
 
-    cd /cfca-work/<your account>
-    cp -r /cfca-work/dos00/RayleighTaylorInstability .
+    cd /mwork2/<your account>
+    cp -r /mwork2/dos31/RayleighTaylorInstability .
 To run the code, you need to compile `Simulation.f90`.
     
     cd RayleighTaylorInstability/RTSMHYD2D
@@ -24,7 +24,7 @@ Then `Simulation.x` is made in this directory.
 ### run
 Let's run the code.
     
-    qsub pbs_more.sh
+    qsub pbs_m000.sh
     qstat -u <your account>
     
 The simulation data is saved in `bindata/`.
@@ -33,7 +33,7 @@ The simulation data is saved in `bindata/`.
 GO to analysis server. Here ?? below is 09-14. To analyze the data, let us make `Analysis.x`.
     
     ssh <your account>@an??.cfca.nao.ac.jp
-    cd /cfca-work/<your account>/RayleighTaylorInstability/RTSMHYD2D/analysis
+    cd /mwork2/<your account>/RayleighTaylorInstability/RTSMHYD2D/analysis
     make Analysis.x
     
 Now you have many time-snapshots of data. To count it, use a script.

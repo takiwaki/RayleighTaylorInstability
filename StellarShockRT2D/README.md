@@ -7,18 +7,18 @@
 This is the instruction for spring school of division of science.
 
 ### login and go to work directory 
-First login the server, `more.cfca.nao.ac.jp`.
+First login the server, `m000.cfca.nao.ac.jp`.
 
-    ssh <your account>@more.cfca.nao.ac.jp
+    ssh <your account>@m000.cfca.nao.ac.jp
     
 Then, go to work directory. Make it if that does not exist.
 
-    mkdir /cfca-work/<your account>
-    cd /cfca-work/<your account>
+    mkdir /mwork2/<your account>
+    cd /mwork2/<your account>
 
 Copy the programs.　If you did not do it before. 
     
-    cp -r /cfca-work/dos04/RayleighTaylorInstability .
+    cp -r /mwork2/dos31/RayleighTaylorInstability .
     
 Keep the original program as it is.
     
@@ -34,7 +34,7 @@ Start the simulation by copying the original file. You can name the directory as
 ### compile 
 To run the code, you need to compile `Simulation.f90`.
     
-    module load intel/2022
+    module load intel
     make build
     
 Then `Simulation.x`is made in this directory. `make Simulation.x` also works. You can know the command by `make help`.
@@ -42,7 +42,7 @@ Then `Simulation.x`is made in this directory. `make Simulation.x` also works. Yo
 ### run
 Let's run the code.
     
-    qsub pbs_more.sh
+    qsub pbs_m000.sh
     
 The simulation data is saved in `bindata/`.
     
@@ -55,7 +55,7 @@ Open another terminal and go to analysis server, `an??.cfca.nao.ac.jp`. Here ?? 
     
 Then go to the work directory. Change `_model1` to the name you used.
 
-    cd /cfca-work/<your account>/RayleighTaylorInstability/RTBWHYD2D_models/analysis .
+    cd /mwork2/<your account>/RayleighTaylorInstability/RTBWHYD2D_models/analysis .
     make Analysis.x
     
 Now you have many time-snapshots of data. To count it, use a script.
